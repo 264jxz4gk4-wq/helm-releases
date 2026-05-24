@@ -87,10 +87,10 @@ jobs:
         run: |
           pyinstaller --windowed --name "Helm" `
             --add-data "ui;ui" `
-            --add-binary "adb.exe;." `
-            --add-binary "AdbWinApi.dll;." `
-            --add-binary "AdbWinUsbApi.dll;." `
             menubar_windows.py --noconfirm
+          copy adb.exe dist\Helm\adb.exe
+          copy AdbWinApi.dll dist\Helm\AdbWinApi.dll
+          copy AdbWinUsbApi.dll dist\Helm\AdbWinUsbApi.dll
           cd dist
           Compress-Archive -Path Helm -DestinationPath ..\HelmWindows.zip
 

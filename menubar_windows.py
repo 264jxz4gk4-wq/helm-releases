@@ -12,6 +12,10 @@ import math
 # ── paths ──────────────────────────────────────────────────────────────────
 def resource(path):
     if hasattr(sys, '_MEIPASS'):
+        # First check next to exe, then in _MEIPASS
+        next_to_exe = os.path.join(os.path.dirname(sys.executable), path)
+        if os.path.exists(next_to_exe):
+            return next_to_exe
         return os.path.join(sys._MEIPASS, path)
     return os.path.join(os.path.dirname(__file__), path)
 
