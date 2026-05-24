@@ -1,0 +1,123 @@
+name: Build Helm
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller flask rumps pillow requests zeroconf pyobjc-framework-ServiceManagement
+
+      - name: Build Mac app
+        run: |
+          python3 -c "
+          from PIL import Image, ImageDraw
+          import math, struct, zlib, os
+          size = 64
+          img = Image.new('RGBA', (size, size), (0,0,0,0))
+          d = ImageDraw.Draw(img)
+          cx, cy = size//2, size//2
+          scale = size/1024
+          primary = (46,134,255,255)
+          outer = int(280*scale)
+          d.ellipse([cx-outer,cy-outer,cx+outer,cy+outer], outline=primary, width=max(int(28*scale),2))
+          inner = int(120*scale)
+          d.ellipse([cx-inner,cy-inner,cx+inner,cy+inner], outline=primary, width=max(int(20*scale),2))
+          hub = int(55*scale)
+          d.ellipse([cx-hub,cy-hub,cx+hub,cy+hub], fill=primary)
+          for angle in range(0,360,45):
+              rad = math.radians(angle)
+              x1=cx+math.sin(rad)*inner; y1=cy-math.cos(rad)*inner
+              x2=cx+math.sin(rad)*outer; y2=cy-math.cos(rad)*outer
+              d.line([x1,y1,x2,y2], fill=primary, width=max(int(18*scale),2))
+              ball=max(int(22*scale),3)
+              d.ellipse([x2-ball,y2-ball,x2+ball,y2+ball], fill=primary)
+          img.save('/tmp/helm.png')
+          print('Icon created')
+          "
+          pyinstaller --windowed --name "Helm" \
+            --add-data "ui:ui" \
+            menubar.py --noconfirm
+          cd dist && zip -r ../HelmMac.zip Helm.app
+
+      - name: Upload Mac artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HelmMac
+          path: HelmMac.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller flask pystray pillow requests
+
+      - name: Download ADB for Windows
+        run: |
+          curl -L "https://dl.google.com/android/repository/platform-tools-latest-windows.zip" -o platform-tools.zip
+          tar -xf platform-tools.zip platform-tools/adb.exe platform-tools/AdbWinApi.dll platform-tools/AdbWinUsbApi.dll
+          copy platform-tools\adb.exe adb.exe
+          copy platform-tools\AdbWinApi.dll AdbWinApi.dll
+          copy platform-tools\AdbWinUsbApi.dll AdbWinUsbApi.dll
+
+      - name: Build Windows exe
+        run: |
+          pyinstaller --onefile --windowed --name "Helm" `
+            --add-data "ui;ui" `
+            --add-binary "adb.exe;." `
+            --add-binary "AdbWinApi.dll;." `
+            --add-binary "AdbWinUsbApi.dll;." `
+            menubar_windows.py --noconfirm
+          cd dist
+          Compress-Archive -Path Helm.exe -DestinationPath ..\HelmWindows.zip
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HelmWindows
+          path: HelmWindows.zip
+
+  release:
+    needs: [build-mac, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Get version
+        id: version
+        run: echo "version=$(cat version.json | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])")" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Helm v${{ steps.version.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            HelmMac/HelmMac.zip
+            HelmWindows/HelmWindows.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
