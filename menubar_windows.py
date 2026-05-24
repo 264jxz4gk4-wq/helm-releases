@@ -19,20 +19,27 @@ def resource(path):
         return os.path.join(sys._MEIPASS, path)
     return os.path.join(os.path.dirname(__file__), path)
 
-ADB = resource('adb.exe')
-UI_DIR = resource('ui')
+def get_adb():
+    return resource('adb.exe')
+
+def get_ui_dir():
+    return resource('ui')
+
+ADB = None  # resolved lazily
+UI_DIR = None  # resolved lazily
 
 # ── Flask ───────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 
 def adb(ip, cmd):
-    full = f'{ADB} -s {ip}:5555 {cmd}'
+    adb_path = get_adb()
+    full = f'{adb_path} -s {ip}:5555 {cmd}'
     result = subprocess.run(full, shell=True, capture_output=True, text=True, timeout=60)
     return result.stdout + result.stderr
 
 @app.route('/')
 def index():
-    return send_from_directory(UI_DIR, 'index.html')
+    return send_from_directory(get_ui_dir(), 'index.html')
 
 @app.route('/adb', methods=['POST'])
 def adb_route():
@@ -46,7 +53,7 @@ def adb_route():
             with tempfile.NamedTemporaryFile(suffix='.apk', delete=False) as f:
                 tmp = f.name
             urllib.request.urlretrieve(install_url, tmp)
-            result = subprocess.run(f'{ADB} -s {ip}:5555 install -r "{tmp}"', shell=True, capture_output=True, text=True, timeout=300)
+            result = subprocess.run(f'{get_adb()} -s {ip}:5555 install -r "{tmp}"', shell=True, capture_output=True, text=True, timeout=300)
             os.unlink(tmp)
             return jsonify({'output': result.stdout + result.stderr, 'error': ''})
         except Exception as e:
@@ -60,7 +67,7 @@ def adb_route():
 def connect():
     data = request.json
     ip = data.get('ip', '')
-    subprocess.run(f'{ADB} connect {ip}:5555', shell=True, capture_output=True)
+    subprocess.run(f'{get_adb()} connect {ip}:5555', shell=True, capture_output=True)
     output = adb(ip, 'shell getprop ro.product.model')
     return jsonify({'output': output.strip(), 'error': ''})
 
