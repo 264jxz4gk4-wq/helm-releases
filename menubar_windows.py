@@ -133,6 +133,14 @@ def run_tray():
 
 # ── Main ────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
+    import logging
+    log_path = os.path.join(os.path.dirname(sys.executable) if hasattr(sys, '_MEIPASS') else os.path.dirname(__file__), 'helm.log')
+    logging.basicConfig(filename=log_path, level=logging.DEBUG, format='%(asctime)s %(message)s')
+    logging.info(f'Starting Helm')
+    logging.info(f'ADB path: {get_adb()}')
+    logging.info(f'ADB exists: {os.path.exists(get_adb())}')
+    logging.info(f'UI dir: {get_ui_dir()}')
+    logging.info(f'UI exists: {os.path.exists(get_ui_dir())}')
     threading.Thread(target=run_flask, daemon=True).start()
     import time; time.sleep(1)
     webbrowser.open('http://localhost:5001')
