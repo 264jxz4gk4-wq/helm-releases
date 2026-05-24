@@ -1,0 +1,7 @@
+helmenv/
+dist/
+build/
+*.spec
+.DS_Store
+__pycache__/
+*.pyc
