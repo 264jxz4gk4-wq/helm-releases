@@ -1,4 +1,5 @@
 import rumps
+import sys
 import subprocess
 import threading
 import shutil
@@ -12,6 +13,10 @@ import socket
 from flask import Flask, request, jsonify, send_from_directory
 from zeroconf import ServiceInfo, Zeroconf
 
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(BASE_DIR, relative_path)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UI_DIR = os.path.join(BASE_DIR, 'ui')
 CURRENT_VERSION = "1.0.0"
@@ -182,7 +187,14 @@ def add_cors(response):
 
 class HelmServer(rumps.App):
     def __init__(self):
-        super().__init__('⎋', quit_button=None)
+        paths = [os.path.join(os.path.dirname(sys.executable), "..", "Resources", "helm_icon.png"), os.path.join(os.path.dirname(sys.executable), "helm_icon.png"), os.path.join(BASE_DIR, "helm_icon.png"), "/Users/sethdoornbos/Desktop/Helm.app/Contents/Resources/helm_icon.png"]
+        icon_path = next((p for p in paths if os.path.exists(p)), None)
+        open(os.path.expanduser("~/helm_debug.log"), "w").write(f"icon_path: {icon_path}\nexists: {os.path.exists(icon_path) if icon_path else False}\nsys.executable: {sys.executable}\n")
+        if icon_path is None or not os.path.exists(icon_path):
+            icon_path = None
+        super().__init__('', icon=icon_path, template=False, quit_button=None)
+        if icon_path:
+            self.title = ''
         login_check = '✓ Launch at Login' if is_launch_at_login() else 'Launch at Login'
         self.menu = [
             rumps.MenuItem('Helm', callback=None),

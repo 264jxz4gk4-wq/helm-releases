@@ -5,7 +5,7 @@ a = Analysis(
     ['menubar.py'],
     pathex=[],
     binaries=[],
-    datas=[('ui', 'ui')],
+    datas=[('ui', 'ui'), ('helm.icns', '.'), ('helm_icon.png', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -32,7 +32,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['/tmp/helm.icns'],
+    icon=['helm.icns'],
 )
 coll = COLLECT(
     exe,
@@ -46,6 +46,6 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='Helm.app',
-    icon='/tmp/helm.icns',
+    icon='helm.icns',
     bundle_identifier=None,
 )
