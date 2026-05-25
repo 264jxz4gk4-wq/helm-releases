@@ -46,6 +46,7 @@ def adb_route():
     data = request.json
     ip = data.get('ip', '')
     cmd = data.get('cmd', '')
+    command = data.get('command', '')
     install_url = data.get('install_url', '')
     if install_url:
         try:
@@ -56,6 +57,15 @@ def adb_route():
             result = subprocess.run(f'{get_adb()} -s {ip}:5555 install -r "{tmp}"', shell=True, capture_output=True, text=True, timeout=300)
             os.unlink(tmp)
             return jsonify({'output': result.stdout + result.stderr, 'error': ''})
+        except Exception as e:
+            return jsonify({'output': '', 'error': str(e)})
+    if command:
+        adb_path = get_adb()
+        if command.startswith('adb '):
+            command = adb_path + command[3:]
+        try:
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
+            return jsonify({'output': result.stdout, 'error': result.stderr})
         except Exception as e:
             return jsonify({'output': '', 'error': str(e)})
     if not ip or not cmd:
