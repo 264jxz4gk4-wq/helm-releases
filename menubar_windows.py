@@ -53,7 +53,12 @@ def adb_route():
             import tempfile, urllib.request
             with tempfile.NamedTemporaryFile(suffix='.apk', delete=False) as f:
                 tmp = f.name
-            urllib.request.urlretrieve(install_url, tmp)
+            import ssl
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            with urllib.request.urlopen(install_url, context=ctx) as u, open(tmp, "wb") as out:
+                out.write(u.read())
             result = subprocess.run(f'{get_adb()} -s {ip}:5555 install -r "{tmp}"', shell=True, capture_output=True, text=True, timeout=300)
             os.unlink(tmp)
             return jsonify({'output': result.stdout + result.stderr, 'error': ''})
