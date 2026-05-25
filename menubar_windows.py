@@ -164,11 +164,7 @@ def check_update(icon, item):
             mb.showinfo('Helm', 'You are on the latest version!')
             return
         import tkinter.messagebox as mb
-        answer = mb.askyesno('Helm Update', f"Version {latest} is available!
-
-{data.get('notes', '')}
-
-Install now?")
+        answer = mb.askyesno('Helm Update', f"Version {latest} is available!\n\n{data.get('notes', '')}\n\nInstall now?")
         if answer:
             download_url = data.get('windows_download', '')
             if download_url:
