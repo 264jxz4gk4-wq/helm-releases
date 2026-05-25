@@ -122,14 +122,65 @@ def make_icon():
 def open_ui(icon, item):
     webbrowser.open('http://localhost:5001')
 
+CURRENT_VERSION = '1.0.0'
+
+def do_update(download_url, icon):
+    try:
+        import tempfile, zipfile, urllib.request, ssl, shutil
+        import tkinter.messagebox as mb
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        tmp_zip = os.path.join(tempfile.gettempdir(), 'HelmUpdate.zip')
+        with urllib.request.urlopen(download_url, context=ctx) as u, open(tmp_zip, 'wb') as f:
+            f.write(u.read())
+        extract_dir = os.path.join(tempfile.gettempdir(), 'HelmUpdate')
+        if os.path.exists(extract_dir):
+            shutil.rmtree(extract_dir)
+        with zipfile.ZipFile(tmp_zip, 'r') as z:
+            z.extractall(extract_dir)
+        exe_dir = os.path.dirname(sys.executable) if hasattr(sys, '_MEIPASS') else os.path.dirname(__file__)
+        bat = os.path.join(tempfile.gettempdir(), 'helm_updater.bat')
+        with open(bat, 'w') as f:
+            f.write('@echo off
+')
+            f.write('timeout /t 2 /nobreak > nul
+')
+            f.write(f'xcopy /E /Y /I "{extract_dir}\Helm" "{exe_dir}"
+')
+            f.write(f'start "" "{os.path.join(exe_dir, "Helm.exe")}"
+')
+            f.write('del "%~f0"
+')
+        subprocess.Popen(f'cmd /c "{bat}"', shell=True)
+        icon.stop()
+        os._exit(0)
+    except Exception as e:
+        import tkinter.messagebox as mb
+        mb.showerror('Update Failed', str(e))
+
 def check_update(icon, item):
     try:
         r = requests.get('https://raw.githubusercontent.com/264jxz4gk4-wq/helm-releases/main/version.json', timeout=5)
         data = r.json()
+        latest = data.get('version', CURRENT_VERSION)
+        if latest == CURRENT_VERSION:
+            import tkinter.messagebox as mb
+            mb.showinfo('Helm', 'You are on the latest version!')
+            return
         import tkinter.messagebox as mb
-        mb.showinfo('Helm Update', f"Version {data['version']} available!\n\n{data.get('notes','')}")
-    except:
-        pass
+        answer = mb.askyesno('Helm Update', f"Version {latest} is available!
+
+{data.get('notes', '')}
+
+Install now?")
+        if answer:
+            download_url = data.get('windows_download', '')
+            if download_url:
+                threading.Thread(target=do_update, args=(download_url, icon), daemon=True).start()
+    except Exception as e:
+        import tkinter.messagebox as mb
+        mb.showerror('Update Check Failed', str(e))
 
 def quit_app(icon, item):
     icon.stop()
