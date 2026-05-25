@@ -137,7 +137,14 @@ def quit_app(icon, item):
 
 def run_tray():
     icon_img = make_icon()
+    adb_status = 'ADB: ✓ Found' if os.path.exists(get_adb()) else 'ADB: ✗ Not found'
     menu = pystray.Menu(
+        pystray.MenuItem('Helm — TV Manager', None, enabled=False),
+        pystray.Menu.SEPARATOR,
+        pystray.MenuItem('● Running on port 5001', None, enabled=False),
+        pystray.MenuItem(adb_status, None, enabled=False),
+        pystray.MenuItem('Version 1.0.0', None, enabled=False),
+        pystray.Menu.SEPARATOR,
         pystray.MenuItem('Open Helm', open_ui, default=True),
         pystray.MenuItem('Check for Updates', check_update),
         pystray.Menu.SEPARATOR,
