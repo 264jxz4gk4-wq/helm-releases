@@ -142,16 +142,11 @@ def do_update(download_url, icon):
         exe_dir = os.path.dirname(sys.executable) if hasattr(sys, '_MEIPASS') else os.path.dirname(__file__)
         bat = os.path.join(tempfile.gettempdir(), 'helm_updater.bat')
         with open(bat, 'w') as f:
-            f.write('@echo off
-')
-            f.write('timeout /t 2 /nobreak > nul
-')
-            f.write(f'xcopy /E /Y /I "{extract_dir}\Helm" "{exe_dir}"
-')
-            f.write(f'start "" "{os.path.join(exe_dir, "Helm.exe")}"
-')
-            f.write('del "%~f0"
-')
+            f.write('@echo off\n')
+            f.write('timeout /t 2 /nobreak > nul\n')
+            f.write(f'xcopy /E /Y /I "{extract_dir}\\Helm" "{exe_dir}"\n')
+            f.write(f'start "" "{os.path.join(exe_dir, "Helm.exe")}"\n')
+            f.write('del "%~f0"\n')
         subprocess.Popen(f'cmd /c "{bat}"', shell=True)
         icon.stop()
         os._exit(0)
