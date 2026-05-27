@@ -225,33 +225,60 @@ const GOOGLETV_BLOAT = [
 ];
 
 const GUIDES = [
-  { id: 'kodi', title: 'What is Kodi?', icon: '🎬', color: '#2980b9', desc: 'Understand Kodi before diving in', steps: [
-    { title: 'Kodi is a free media player', body: 'Kodi is an open source app that plays movies, TV shows, music and more. The magic happens when you add addons.' },
-    { title: 'What are Add-ons?', body: 'Add-ons are like apps inside Kodi. Umbrella and Seren are the most popular for streaming.' },
-    { title: 'What is a Repository?', body: 'A repo is like an app store inside Kodi. You add a repo URL, install it, then install addons from it.' },
+  { id: 'whatiskodi', title: 'What is Kodi?', icon: '🎬', color: '#2980b9', desc: 'Start here — understand Kodi before diving in', steps: [
+    { title: 'Kodi is a free media player', body: 'Kodi is an open source app that plays movies, TV shows, music and more. The magic happens when you add addons — making it more powerful than any paid streaming service.' },
+    { title: 'What are Add-ons?', body: 'Add-ons are like apps inside Kodi. The best in 2026 are The Crew (easiest, great for sports), Umbrella (best for movies and TV), and Stremio (easiest overall).' },
+    { title: 'What is a Repository?', body: 'A repo is like an app store inside Kodi. You add a repo URL in File Manager, install the repo zip, then install addons from it. Every addon follows this same process.' },
+    { title: 'Recommended setup order', body: '1. Install Kodi from the Store tab
+2. Get Real Debrid ($3-4/month)
+3. Install CocoScrapers (free stream finder)
+4. Install The Crew (sports + everything)
+5. Install Umbrella (best movies + TV)
+
+Follow the guides in this order for the best experience.' },
   ]},
-  { id: 'realdebrid', title: 'Real Debrid Setup', icon: '⚡', color: '#e67e22', desc: 'Premium cached torrents — instant streams', steps: [
-    { title: 'What is Real Debrid?', body: 'Real Debrid downloads torrents on fast servers and lets you stream instantly. Plans start around $4/month.' },
-    { title: 'Create Your Account', body: 'Go to real-debrid.com and sign up.' },
-    { title: 'Connect to Umbrella', body: 'Open Umbrella from your addons. Go to Tools → Accounts → Real-Debrid → Authorize. A code will appear on screen.' },
-    { title: 'Enter the Code', body: 'On your phone or computer go to real-debrid.com/device and enter the code. Umbrella will confirm it worked.' },
+  { id: 'realdebrid', title: 'Real Debrid — Do This First', icon: '⚡', color: '#e67e22', desc: 'The $3/month upgrade that makes everything work', steps: [
+    { title: 'What is Real Debrid?', body: 'Real Debrid downloads torrents on super fast servers and lets you stream instantly in 4K. Think of it as having every movie, TV show, and sport ever made for about $3/month.' },
+    { title: 'How much does it cost?', body: 'About $4 for 30 days or $17-18 for 180 days (~$3/month). Compare to Netflix at $15-23/month. Real Debrid gives you more content than all streaming services combined for less.' },
+    { title: 'Sign up', body: 'Go to real-debrid.com and create a free account. Buy a plan — 180 days is the best value at about $17 total. No auto-renewal.' },
+    { title: 'Connect to The Crew', body: 'Open The Crew → Tools → Accounts → Real Debrid → Authorize. A code appears on screen — go to real-debrid.com/device on your phone and enter it.' },
+    { title: 'Connect to Umbrella', body: 'Open Umbrella → Tools → Settings → Accounts → Real Debrid → Authorize. Enter the code at real-debrid.com/device on your phone.' },
+    { title: 'What to look for', body: 'Always pick sources marked RD or highlighted in green — these stream instantly in 4K with zero buffering. Avoid sources without RD.' },
   ]},
-  { id: 'umbrella', title: 'Install Umbrella', icon: '☂️', color: '#8e44ad', desc: 'Best Kodi addon for movies and TV', steps: [
-    { title: 'Enable Unknown Sources', body: 'Settings → System → Add-ons → turn on Unknown Sources.' },
-    { title: 'Add Repository Source', body: 'Settings → File Manager → Add Source → type: https://umbrellaplug.github.io → name it umbrella.' },
-    { title: 'Install from Zip', body: 'Settings → Add-ons → Install from zip file → umbrella → install the zip.' },
-    { title: 'Install Umbrella Addon', body: 'Install from repository → Umbrella Repository → Video add-ons → Umbrella → Install.' },
-    { title: 'Add CocoScrapers Source', body: 'Go back to Settings → File Manager → Add Source. Type: https://cocojoe2411.github.io and name it coco.' },
-    { title: 'Install CocoScrapers', body: 'Add-ons → Install from zip file → coco → install the zip file. Then install from repository → CocoScrapers Repository → install CocoScrapers.' },
-    { title: 'Enable CocoScrapers', body: 'Open Umbrella → Tools → Enable External Providers. CocoScrapers will now find streams for you.' },
+  { id: 'cocoscrapers', title: 'Install CocoScrapers', icon: '🕷️', color: '#16a085', desc: 'Required stream finder — install before any addon', steps: [
+    { title: 'What is CocoScrapers?', body: 'CocoScrapers finds streams for Kodi addons. Both The Crew and Umbrella need it to find the most streams. Install it once and it works with everything.' },
+    { title: 'Enable Unknown Sources', body: 'Open Kodi → Settings (gear icon) → System → Add-ons → turn on Unknown Sources. Click Yes on the warning. You only need to do this once.' },
+    { title: 'Add CocoScrapers Source', body: 'Go to Settings → File Manager → Add Source. Click None and type: https://cocojoe2411.github.io — name it coco and click OK.' },
+    { title: 'Install from Zip', body: 'Go to Settings → Add-ons → Install from zip file → select coco → install the zip file. Wait for the Repository installed notification.' },
+    { title: 'Install CocoScrapers Addon', body: 'Go to Install from repository → CocoScrapers Repository → Program add-ons → CocoScrapers → Install.' },
+    { title: 'Done', body: 'CocoScrapers is installed. When you install The Crew or Umbrella they will automatically use it. You do not need to do anything else.' },
   ]},
-  { id: 'stremio', title: 'Stremio + Torrentio', icon: '🌀', color: '#2980b9', desc: 'Easiest streaming setup for beginners', steps: [
-    { title: 'What is Stremio?', body: 'Stremio is much easier than Kodi. It looks like Netflix.' },
-    { title: 'Install Stremio', body: 'Download from stremio.com or use the Store tab.' },
-    { title: 'Add Torrentio', body: 'Go to stremio.com/addon/torrentio while signed in. Click Install.' },
-    { title: 'Connect Real Debrid', body: 'In Torrentio settings set debrid to Real Debrid and enter your API key from real-debrid.com/apitoken.' },
+  { id: 'thecrew', title: 'Install The Crew — Sports + Everything', icon: '🏆', color: '#27ae60', desc: 'Best for sports — NFL, NBA, UFC, Soccer and more', steps: [
+    { title: 'What is The Crew?', body: 'The Crew is the most popular all-in-one Kodi addon with movies, TV shows, live TV, and a massive Sports section — NFL, NBA, MLB, NHL, UFC, Boxing, Soccer, Formula 1 and more. Install CocoScrapers and Real Debrid first.' },
+    { title: 'Add The Crew Repository', body: 'Go to Settings → File Manager → Add Source. Click None and type: https://team-crew.github.io — name it team-crew and click OK.' },
+    { title: 'Install The Crew Repository', body: 'Go to Settings → Add-ons → Install from zip file → select team-crew → install the repository zip. Wait for the Repository installed notification.' },
+    { title: 'Install The Crew Addon', body: 'Go to Install from repository → The Crew Repository → Video add-ons → The Crew → Install.' },
+    { title: 'Enable CocoScrapers', body: 'Open The Crew → Tools → Settings → Scrapers → Enable External Providers → turn on CocoScrapers.' },
+    { title: 'Connect Real Debrid', body: 'Open The Crew → Tools → Accounts → Real Debrid → Authorize. Enter the code at real-debrid.com/device on your phone.' },
+    { title: 'Watch Sports', body: 'Open The Crew → Sports. Find NFL, NBA, MLB, NHL, UFC, Boxing, Soccer, F1 and more. For live games look in Sports → Live. Always pick an RD source for instant 4K.' },
   ]},
-];
+  { id: 'umbrella', title: 'Install Umbrella — Best for Movies + TV', icon: '☂️', color: '#8e44ad', desc: 'Best Kodi addon for movies and TV shows', steps: [
+    { title: 'What is Umbrella?', body: 'Umbrella is the best Kodi addon for movies and TV. It has the highest quality streams and best Real Debrid integration. Install CocoScrapers and Real Debrid before this.' },
+    { title: 'Add Umbrella Repository', body: 'Go to Settings → File Manager → Add Source. Click None and type: https://umbrellaplug.github.io — name it umbrella and click OK.' },
+    { title: 'Install Umbrella Repository', body: 'Go to Settings → Add-ons → Install from zip file → select umbrella → install the repository zip. Wait for the Repository installed notification.' },
+    { title: 'Install Umbrella Addon', body: 'Go to Install from repository → Umbrella Repository → Video add-ons → Umbrella → Install.' },
+    { title: 'Enable CocoScrapers', body: 'Open Umbrella → Tools → Settings → Providers → Enable External Providers → turn on CocoScrapers. Required for Umbrella to find streams.' },
+    { title: 'Connect Real Debrid', body: 'Open Umbrella → Tools → Settings → Accounts → Real Debrid → Authorize. Enter the code at real-debrid.com/device on your phone.' },
+    { title: 'Start streaming', body: 'Browse movies and TV in Umbrella. Always pick RD sources (green) for instant 4K. If you see No Streams make sure CocoScrapers is enabled and Real Debrid is authorized.' },
+  ]},
+  { id: 'stremio', title: 'Stremio — Easiest Streaming', icon: '🌀', color: '#2980b9', desc: 'Simplest setup — looks just like Netflix', steps: [
+    { title: 'Why Stremio?', body: 'Stremio is the easiest streaming setup. It looks just like Netflix and takes 5 minutes. Great starting point before diving into Kodi.' },
+    { title: 'Install Stremio', body: 'Download Stremio from stremio.com or install from the Store tab in Helm.' },
+    { title: 'Add Torrentio', body: 'On your phone go to: https://torrentio.strem.fun — click Configure → select Real Debrid → enter your API key from real-debrid.com/apitoken → click Install.' },
+    { title: 'Watch anything', body: 'Search for any movie or TV show. Pick the highest quality RD source for instant 4K with no buffering.' },
+    { title: 'Sports on Stremio', body: 'Go to https://stremio-sports.vercel.app on your phone and click Install. Get live NFL, NBA, UFC, Soccer and more directly in Stremio.' },
+  ]},
+]
 
 function applyTheme(type) {
   const t = THEMES[type] || THEMES.unknown;
