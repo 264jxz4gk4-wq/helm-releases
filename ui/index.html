@@ -109,11 +109,21 @@
     </div>
     <div id="connect-view">
       <div class="card">
-        <label style="color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px">Device IP Address</label>
-        <input class="input" id="ip-input" placeholder="192.168.1.74" type="text" onkeydown="if(event.key==='Enter')connect()">
-        <button class="btn" onclick="connect()" id="connect-btn">Connect</button>
+        <button class="btn" onclick="openOnboarding()" style="width:100%;margin-bottom:12px;background:#2980b9">📡 Scan for my TV</button>
+        <div style="text-align:center;margin-bottom:14px">
+          <a href="#" onclick="openOnboarding();return false" style="color:#888;font-size:12px;text-decoration:underline">Need help getting your TV ready?</a>
+        </div>
+        <div style="border-top:1px solid #2a2a2a;margin:14px 0;padding-top:14px">
+          <label style="color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px">Or enter IP manually</label>
+          <input class="input" id="ip-input" placeholder="192.168.1.74" type="text" onkeydown="if(event.key==='Enter')connect()">
+          <button class="btn" onclick="connect()" id="connect-btn">Connect</button>
+        </div>
       </div>
       <div id="saved-devices"></div>
+    </div>
+
+    <div id="onboarding-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000d;z-index:1000;overflow-y:auto">
+      <div style="max-width:480px;margin:0 auto;padding:24px" id="onboarding-content"></div>
     </div>
   </div>
 
@@ -174,6 +184,9 @@ const DEVICE_NAMES = {
 };
 
 const STORE = [
+  // Utility
+  { name: 'Downloader', pkg: 'com.esaba.downloader', desc: 'Browse and sideload APKs on your TV — required for Fire TV', icon: '⬇️', category: 'Utility',
+    playstore: true },
   // Media Players
   { name: 'Kodi', pkg: 'org.xbmc.kodi', desc: 'Ultimate media center with addons', icon: '🎬', category: 'Media Players',
     url: 'https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.3-Omega-arm64-v8a.apk' },
@@ -183,7 +196,7 @@ const STORE = [
     url: 'https://mirror.clarkson.edu/videolan/vlc-android/3.6.3/VLC-Android-3.6.3-arm64-v8a.apk' },
   // Streaming
   { name: 'Stremio', pkg: 'com.stremio.one', desc: 'Stream movies and TV — easiest setup', icon: '🌀', category: 'Streaming',
-    url: 'https://www.stremio.com/thanks-android?ver=latest' },
+    playstore: true },
   // YouTube
   { name: 'SmartTube', pkg: 'org.smarttube.stable', desc: 'YouTube without ads', icon: '▶️', category: 'YouTube',
     url: 'https://github.com/yuliskov/SmartTube/releases/download/31.63s/SmartTube_stable_31.63_arm64-v8a.apk' },
@@ -225,27 +238,49 @@ const GOOGLETV_BLOAT = [
 ];
 
 const GUIDES = [
-  { id: 'whatiskodi', title: 'What is Kodi?', icon: '🎬', color: '#2980b9', desc: 'Start here — understand Kodi before diving in', steps: [
-    { title: 'Kodi is a free media player', body: 'Kodi is an open source app that plays movies, TV shows, music and more. The magic happens when you add addons — making it more powerful than any paid streaming service.' },
-    { title: 'What are Add-ons?', body: 'Add-ons are like apps inside Kodi. The best in 2026 are The Crew (easiest, great for sports), Umbrella (best for movies and TV), and Stremio (easiest overall).' },
-    { title: 'What is a Repository?', body: 'A repo is like an app store inside Kodi. You add a repo URL in File Manager, install the repo zip, then install addons from it. Every addon follows this same process.' },
-    { title: 'Recommended setup order', body: '1. Install Kodi from the Store tab
-2. Get Real Debrid ($3-4/month)
-3. Install CocoScrapers (free stream finder)
-4. Install The Crew (sports + everything)
-5. Install Umbrella (best movies + TV)
-
-Follow the guides in this order for the best experience.' },
+  { id: 'whatiskodi', section: 'stremio', title: 'Start Here: What\'s the Plan?', icon: '🧭', color: '#2980b9', desc: '2 minute overview — pick your path', steps: [
+    { title: 'Two ways to stream — pick based on what you watch', body: 'This app can set up two different systems: Stremio (simple, looks like Netflix) or Kodi (more setup, but the only good option for live sports). Most people should start with Stremio below. If live sports are your main reason for being here, skip ahead to the Kodi section.' },
+    { title: 'Why not just use Stremio for everything?', body: 'Stremio is great for movies and TV, but its live sports coverage is limited and less reliable than Kodi. If you want NFL, NBA, MLB, NHL, UFC, Boxing or Soccer, Kodi with The Crew addon is genuinely the better tool for that specific job.' },
+    { title: 'What is Kodi, if you choose that path?', body: 'Kodi is a free, open source media player. By itself it just plays files — the power comes from addons, which work like apps inside Kodi that find content for you. The Crew and Umbrella are the two addons used in the guides below.' },
+    { title: 'What you will set up either way', body: 'Both paths work best with a Debrid service ($3-4/month) — a service that gives you instant, buffer-free streams. Whichever path you choose, getting a Debrid service is one of the first steps.' },
   ]},
-  { id: 'realdebrid', title: 'Real Debrid — Do This First', icon: '⚡', color: '#e67e22', desc: 'The $3/month upgrade that makes everything work', steps: [
-    { title: 'What is Real Debrid?', body: 'Real Debrid downloads torrents on super fast servers and lets you stream instantly in 4K. Think of it as having every movie, TV show, and sport ever made for about $3/month.' },
-    { title: 'How much does it cost?', body: 'About $4 for 30 days or $17-18 for 180 days (~$3/month). Compare to Netflix at $15-23/month. Real Debrid gives you more content than all streaming services combined for less.' },
+  { id: 'stremio', section: 'stremio', title: 'Get Started with Stremio', icon: '🌀', color: '#2980b9', desc: 'Easiest setup for movies + TV — but not for live sports', steps: [
+    { title: 'Why start with Stremio?', body: 'If you want the simplest possible setup, start here instead of Kodi. Stremio looks and works just like Netflix, takes about 10 minutes total, and addons sync automatically to your account — no repos, no zip files, no File Manager. This is the best option for most normal people.' },
+    { title: 'Step 1: Install Stremio on your TV', body: 'Open the Store tab in Helm and tap Install on Stremio. On Google TV or Android TV this opens the Play Store directly to Stremio — tap Install there. On Fire TV, Stremio is not available this way (it is not in the Amazon Appstore) — see the "Fire TV Owners: Read This First" guide for a quick 5-minute workaround using the Downloader app.' },
+    { title: 'Step 2: Create a free account', body: 'Open Stremio on your TV and create a free account, or sign in with Google or Facebook. This account is what makes your addons sync automatically across your phone, TV, and computer.' },
+    { title: 'Step 3: Get a Debrid service (optional but recommended)', body: 'Stremio works without a debrid service, but streams will be slower and may buffer. With Real Debrid or TorBox at about $3/month you get instant 4K with zero buffering. See the Debrid Comparison guide if you have not picked one yet.' },
+    { title: 'Step 4: Add the Torrentio addon', body: 'On your phone or computer (not the TV) go to: https://torrentio.strem.fun — this opens a configuration page. If you have a debrid service, select it from the list and enter your API key (find it at real-debrid.com/apitoken or your TorBox dashboard). Click Install at the bottom.' },
+    { title: 'Step 5: Confirm it synced to your TV', body: 'Because Torrentio is tied to your Stremio account, it will automatically appear on your TV within a few seconds — no need to do anything on the TV itself. Open Stremio on your TV and search for any movie to confirm streams show up.' },
+    { title: 'Step 6: Add live sports (optional, but Kodi is better for this)', body: 'You can add the Stremio-Sports addon (https://stremio-sports.vercel.app on your phone, click Install) for live NFL, NBA, MLB, NHL, UFC, Boxing and Soccer. Be aware that sports coverage on Stremio is not as complete or reliable as The Crew on Kodi. If live sports are your main priority, Kodi + The Crew is the better choice — see the Kodi guides below.' },
+    { title: 'Watch anything', body: 'Search for any movie or TV show on your TV. If you have a debrid service connected, pick the source marked with a cloud icon for instant 4K with no buffering. Without a debrid service, pick sources with the most seeders for the fastest start.' },
+    { title: 'Troubleshooting', body: 'No streams showing? Make sure you are signed into the same account on your phone (where you installed Torrentio) and your TV. Slow streams? Double check your debrid API key was entered correctly on the Torrentio configuration page — RD/TorBox keys occasionally need to be re-entered if a stream stops working.' },
+  ]},
+  { id: 'firetv-sideload', section: 'stremio', title: 'Fire TV Owners: Read This First', icon: '🔥', color: '#d35400', desc: 'Stremio is not in the Amazon Appstore — here is how to get it anyway', steps: [
+    { title: 'Why Fire TV is different', body: 'Amazon Fire TV does not have the Google Play Store, and Stremio was removed from the Amazon Appstore. The good news: Amazon Fire TV does have its own app store, and a free tool called Downloader (made by AFTVnews) lets you grab and install any app directly on your Fire TV in a few minutes.' },
+    { title: 'Step 1: Install Downloader', body: 'On your Fire TV remote, press the Home button, then go to Find (magnifying glass) → Search and type Downloader. Select the orange Downloader app by AFTVnews and click Get/Download. You can also try installing it from the Store tab in Helm.' },
+    { title: 'Step 2: Allow installs from unknown sources', body: 'Go to Settings → My Fire TV → Developer Options (if you do not see Developer Options, go to Settings → My Fire TV → About and click your Fire TV name 7 times to unlock it). Turn on Apps from Unknown Sources, then turn on the same setting specifically for the Downloader app when prompted.' },
+    { title: 'Step 3: Open Downloader and go to stremio.com', body: 'Open the Downloader app on your Fire TV. Tap the URL box and type stremio.com/downloads then select Go. This opens Stremio\'s real download page right inside Downloader\'s browser.' },
+    { title: 'Step 4: Pick the Android TV APK', body: 'On the downloads page, scroll to the Android TV section and select the ARM APK (this is the correct version for virtually all Fire TV Sticks and Fire TV Cubes). Tap it to start the download.' },
+    { title: 'Step 5: Install', body: 'When the download finishes, Downloader will ask if you want to install the app. Select Install, wait a few seconds, then select Open. Stremio is now on your Fire TV — sign in with the same account you use elsewhere so your addons sync automatically.' },
+    { title: 'This same trick works for other apps too', body: 'Any app not available through Helm\'s one-click Store install can usually be sideloaded this same way on Fire TV: open Downloader, type the app\'s official website, and download the Android APK from there.' },
+  ]},
+  { id: 'realdebrid', section: 'kodi', title: 'Kodi Step 1: Get a Debrid Service', icon: '⚡', color: '#e67e22', desc: 'Required before any Kodi addon', steps: [
+    { title: 'What is a Debrid Service?', body: 'A debrid service downloads torrents on super fast servers and lets you stream instantly in 4K with no buffering. Think of it as having every movie, TV show, and sport ever made for about $3/month. Real Debrid and TorBox are the two best options — see the Debrid Comparison guide for which one fits you.' },
+    { title: 'How much does it cost?', body: 'Real Debrid: about $4 for 30 days or $17-18 for 180 days (~$3/month). TorBox: plans start around $3/month with a permanent free tier to test first. Compare either to Netflix at $15-23/month — both give you more content for less.' },
+    { title: 'Heads up — Real Debrid filter (May 2026)', body: 'Since May 2026 Real Debrid blocks cached files with tags like WEB-DL, WEBRip, AMZN and YTS in the filename for legal compliance reasons. This means some streams that used to work now fail with a copyright error. TorBox does not have this filter yet, so many users now run TorBox as their main service and keep Real Debrid as a backup.' },
     { title: 'Sign up', body: 'Go to real-debrid.com and create a free account. Buy a plan — 180 days is the best value at about $17 total. No auto-renewal.' },
     { title: 'Connect to The Crew', body: 'Open The Crew → Tools → Accounts → Real Debrid → Authorize. A code appears on screen — go to real-debrid.com/device on your phone and enter it.' },
     { title: 'Connect to Umbrella', body: 'Open Umbrella → Tools → Settings → Accounts → Real Debrid → Authorize. Enter the code at real-debrid.com/device on your phone.' },
     { title: 'What to look for', body: 'Always pick sources marked RD or highlighted in green — these stream instantly in 4K with zero buffering. Avoid sources without RD.' },
   ]},
-  { id: 'cocoscrapers', title: 'Install CocoScrapers', icon: '🕷️', color: '#16a085', desc: 'Required stream finder — install before any addon', steps: [
+  { id: 'debridcompare', section: 'kodi', title: 'Optional: Which Debrid Should I Pick?', icon: '⚖️', color: '#c0392b', desc: 'Real Debrid vs TorBox vs AllDebrid vs Premiumize', steps: [
+    { title: 'Real Debrid', body: 'The original and still the largest cached library, especially for older or niche titles. Downside: since May 2026 it blocks cached files with tags like WEB-DL, WEBRip, AMZN and YTS in the filename, so some streams now fail with a copyright error. Best as your primary if you mainly watch popular content, or as a backup to TorBox. About $3-4/month.' },
+    { title: 'TorBox — the 2026 favorite', body: 'The most recommended alternative in 2026. No filter like Real Debrid, supports multiple IPs/devices at once (great for using on your phone and TV at the same time or sharing with family), and has a permanent free tier so you can test it before paying. Plans start around $3/month for the Essential tier. Many users now run TorBox as their main service.' },
+    { title: 'AllDebrid', body: 'A solid budget-friendly secondary option. Offers a 7-day free trial (full premium access) which is great for testing 4K streaming before committing. Supports 70+ file hosts. Downside: ties your account to one home IP address, so using it on mobile data away from home can get your account flagged.' },
+    { title: 'Premiumize', body: 'The most expensive option but adds extras beyond streaming: up to 1000GB of cloud storage, built-in VPN, and Usenet support. Worth it if you want an all-in-one toolbox, not just stream resolving. Overkill for most people who just want Kodi or Stremio to work.' },
+    { title: 'Our recommendation', body: 'Start with TorBox as your primary — it is cheap, has a free tier to test, and avoids the Real Debrid filter issue. If you find content TorBox has not cached yet, add Real Debrid as a backup. Both The Crew and Umbrella support connecting multiple debrid accounts at once in their Accounts settings.' },
+  ]},
+  { id: 'cocoscrapers', section: 'kodi', title: 'Kodi Step 2: Install CocoScrapers', icon: '🕷️', color: '#16a085', desc: 'Required stream finder — works with both addons below', steps: [
     { title: 'What is CocoScrapers?', body: 'CocoScrapers finds streams for Kodi addons. Both The Crew and Umbrella need it to find the most streams. Install it once and it works with everything.' },
     { title: 'Enable Unknown Sources', body: 'Open Kodi → Settings (gear icon) → System → Add-ons → turn on Unknown Sources. Click Yes on the warning. You only need to do this once.' },
     { title: 'Add CocoScrapers Source', body: 'Go to Settings → File Manager → Add Source. Click None and type: https://cocojoe2411.github.io — name it coco and click OK.' },
@@ -253,7 +288,7 @@ Follow the guides in this order for the best experience.' },
     { title: 'Install CocoScrapers Addon', body: 'Go to Install from repository → CocoScrapers Repository → Program add-ons → CocoScrapers → Install.' },
     { title: 'Done', body: 'CocoScrapers is installed. When you install The Crew or Umbrella they will automatically use it. You do not need to do anything else.' },
   ]},
-  { id: 'thecrew', title: 'Install The Crew — Sports + Everything', icon: '🏆', color: '#27ae60', desc: 'Best for sports — NFL, NBA, UFC, Soccer and more', steps: [
+  { id: 'thecrew', section: 'kodi', title: 'Kodi Step 3: Install The Crew (Live Sports)', icon: '🏆', color: '#27ae60', desc: 'This is how you get live sports — NFL, NBA, UFC and more', steps: [
     { title: 'What is The Crew?', body: 'The Crew is the most popular all-in-one Kodi addon with movies, TV shows, live TV, and a massive Sports section — NFL, NBA, MLB, NHL, UFC, Boxing, Soccer, Formula 1 and more. Install CocoScrapers and Real Debrid first.' },
     { title: 'Add The Crew Repository', body: 'Go to Settings → File Manager → Add Source. Click None and type: https://team-crew.github.io — name it team-crew and click OK.' },
     { title: 'Install The Crew Repository', body: 'Go to Settings → Add-ons → Install from zip file → select team-crew → install the repository zip. Wait for the Repository installed notification.' },
@@ -262,7 +297,7 @@ Follow the guides in this order for the best experience.' },
     { title: 'Connect Real Debrid', body: 'Open The Crew → Tools → Accounts → Real Debrid → Authorize. Enter the code at real-debrid.com/device on your phone.' },
     { title: 'Watch Sports', body: 'Open The Crew → Sports. Find NFL, NBA, MLB, NHL, UFC, Boxing, Soccer, F1 and more. For live games look in Sports → Live. Always pick an RD source for instant 4K.' },
   ]},
-  { id: 'umbrella', title: 'Install Umbrella — Best for Movies + TV', icon: '☂️', color: '#8e44ad', desc: 'Best Kodi addon for movies and TV shows', steps: [
+  { id: 'umbrella', section: 'kodi', title: 'Kodi Step 4: Install Umbrella (Movies + TV)', icon: '☂️', color: '#8e44ad', desc: 'Best Kodi addon for movies and TV shows', steps: [
     { title: 'What is Umbrella?', body: 'Umbrella is the best Kodi addon for movies and TV. It has the highest quality streams and best Real Debrid integration. Install CocoScrapers and Real Debrid before this.' },
     { title: 'Add Umbrella Repository', body: 'Go to Settings → File Manager → Add Source. Click None and type: https://umbrellaplug.github.io — name it umbrella and click OK.' },
     { title: 'Install Umbrella Repository', body: 'Go to Settings → Add-ons → Install from zip file → select umbrella → install the repository zip. Wait for the Repository installed notification.' },
@@ -270,13 +305,6 @@ Follow the guides in this order for the best experience.' },
     { title: 'Enable CocoScrapers', body: 'Open Umbrella → Tools → Settings → Providers → Enable External Providers → turn on CocoScrapers. Required for Umbrella to find streams.' },
     { title: 'Connect Real Debrid', body: 'Open Umbrella → Tools → Settings → Accounts → Real Debrid → Authorize. Enter the code at real-debrid.com/device on your phone.' },
     { title: 'Start streaming', body: 'Browse movies and TV in Umbrella. Always pick RD sources (green) for instant 4K. If you see No Streams make sure CocoScrapers is enabled and Real Debrid is authorized.' },
-  ]},
-  { id: 'stremio', title: 'Stremio — Easiest Streaming', icon: '🌀', color: '#2980b9', desc: 'Simplest setup — looks just like Netflix', steps: [
-    { title: 'Why Stremio?', body: 'Stremio is the easiest streaming setup. It looks just like Netflix and takes 5 minutes. Great starting point before diving into Kodi.' },
-    { title: 'Install Stremio', body: 'Download Stremio from stremio.com or install from the Store tab in Helm.' },
-    { title: 'Add Torrentio', body: 'On your phone go to: https://torrentio.strem.fun — click Configure → select Real Debrid → enter your API key from real-debrid.com/apitoken → click Install.' },
-    { title: 'Watch anything', body: 'Search for any movie or TV show. Pick the highest quality RD source for instant 4K with no buffering.' },
-    { title: 'Sports on Stremio', body: 'Go to https://stremio-sports.vercel.app on your phone and click Install. Get live NFL, NBA, UFC, Soccer and more directly in Stremio.' },
   ]},
 ]
 
@@ -335,6 +363,113 @@ async function loadInstalledPackages() {
 async function loadInstalledThenStore() {
   await loadInstalledPackages();
   renderStore();
+}
+
+const ONBOARDING_STEPS = {
+  firetv: [
+    { num: 1, text: 'Go to <b>Settings → My Fire TV → About</b>' },
+    { num: 2, text: 'Click your device name <b>7 times</b> until it says "You are now a developer!"' },
+    { num: 3, text: 'Go back — you will now see <b>Developer Options</b>' },
+    { num: 4, text: 'Turn on <b>ADB Debugging</b> and <b>Apps from Unknown Sources</b>' },
+  ],
+  googletv: [
+    { num: 1, text: 'Go to <b>Settings → System → About</b>' },
+    { num: 2, text: 'Click "Build" or "Android TV OS Build" <b>7 times</b> until it says "You are now a developer!"' },
+    { num: 3, text: 'Go back — you will now see <b>Developer options</b>' },
+    { num: 4, text: 'Turn on <b>USB debugging</b> (or <b>Network debugging</b> if that is what you see)' },
+  ],
+};
+
+let onboardingDeviceType = 'firetv';
+
+function openOnboarding() {
+  document.getElementById('onboarding-overlay').style.display = 'block';
+  renderOnboardingSteps();
+}
+
+function closeOnboarding() {
+  document.getElementById('onboarding-overlay').style.display = 'none';
+}
+
+function setOnboardingType(type) {
+  onboardingDeviceType = type;
+  renderOnboardingSteps();
+}
+
+function renderOnboardingSteps() {
+  const steps = ONBOARDING_STEPS[onboardingDeviceType];
+  document.getElementById('onboarding-content').innerHTML = `
+    <div style="background:#111;border-radius:16px;padding:20px">
+      <button class="btn btn-sm btn-outline" onclick="closeOnboarding()" style="margin-bottom:16px">✕ Close</button>
+      <h1 style="margin:0 0 6px">Let's connect your TV</h1>
+      <p style="color:#999;font-size:14px;margin:0 0 20px;line-height:1.5">Helm needs USB debugging turned on to control your TV remotely. This is a one-time setup.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+        <div onclick="setOnboardingType('firetv')" style="cursor:pointer;background:#1c1c1e;border:2px solid ${onboardingDeviceType==='firetv'?'#2980b9':'transparent'};border-radius:12px;padding:14px">
+          <div style="font-size:22px;margin-bottom:6px">🔥</div>
+          <div style="font-weight:600;font-size:14px">Fire TV</div>
+          <div style="color:#888;font-size:11px;margin-top:2px">Fire TV Stick, Cube</div>
+        </div>
+        <div onclick="setOnboardingType('googletv')" style="cursor:pointer;background:#1c1c1e;border:2px solid ${onboardingDeviceType==='googletv'?'#2980b9':'transparent'};border-radius:12px;padding:14px">
+          <div style="font-size:22px;margin-bottom:6px">📺</div>
+          <div style="font-weight:600;font-size:14px">Google TV</div>
+          <div style="color:#888;font-size:11px;margin-top:2px">TCL, Sony, onn., Chromecast</div>
+        </div>
+      </div>
+      <div style="background:#1c1c1e;border-radius:12px;padding:16px">
+        <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px">On your remote</div>
+        ${steps.map(s => `
+          <div style="display:flex;gap:12px;margin-bottom:14px">
+            <div style="width:22px;height:22px;border-radius:50%;background:#2980b933;color:#5dade2;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">${s.num}</div>
+            <div style="font-size:14px;line-height:1.5">${s.text}</div>
+          </div>`).join('')}
+      </div>
+      <div style="background:#2980b915;border-radius:8px;padding:12px;margin-top:12px;display:flex;gap:8px">
+        <span>ℹ️</span>
+        <div style="font-size:12px;color:#5dade2;line-height:1.5">Other guides only ask for "Unknown Sources" for sideloading apps. Helm specifically needs ADB/USB Debugging too, since that is how it remotely controls your TV.</div>
+      </div>
+      <button class="btn" onclick="startNetworkScan()" style="width:100%;margin-top:18px;background:#2980b9">Done — scan for my TV →</button>
+    </div>`;
+}
+
+async function startNetworkScan() {
+  document.getElementById('onboarding-content').innerHTML = `
+    <div style="background:#111;border-radius:16px;padding:20px;text-align:center">
+      <div style="font-size:32px;margin-bottom:12px">📡</div>
+      <div style="font-weight:600;font-size:16px;margin-bottom:6px">Scanning your network...</div>
+      <div style="color:#888;font-size:13px">This can take up to 30 seconds</div>
+    </div>`;
+  try {
+    const res = await fetch(`${API}/scan-network`);
+    const data = await res.json();
+    renderScanResults(data.devices || []);
+  } catch(e) {
+    renderScanResults([]);
+  }
+}
+
+function renderScanResults(devices) {
+  document.getElementById('onboarding-content').innerHTML = `
+    <div style="background:#111;border-radius:16px;padding:20px">
+      <button class="btn btn-sm btn-outline" onclick="closeOnboarding()" style="margin-bottom:16px">✕ Close</button>
+      <h1 style="margin:0 0 6px">${devices.length ? 'Found ' + devices.length + ' device' + (devices.length>1?'s':'') : 'No devices found'}</h1>
+      <p style="color:#999;font-size:14px;margin:0 0 20px">${devices.length ? 'Tap a device to connect' : 'Double check developer mode is on, then try again'}</p>
+      ${devices.map(d => `
+        <div onclick="connectFromScan('${d.ip}')" style="cursor:pointer;background:#1c1c1e;border-radius:12px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
+          <div style="font-size:22px">📺</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:14px">${d.model}</div>
+            <div style="color:#888;font-size:12px">${d.ip}</div>
+          </div>
+          <span style="color:#555;font-size:18px">›</span>
+        </div>`).join('')}
+      <button class="btn btn-outline" onclick="startNetworkScan()" style="width:100%;margin-top:8px">🔄 Scan again</button>
+    </div>`;
+}
+
+function connectFromScan(ip) {
+  document.getElementById('ip-input').value = ip;
+  closeOnboarding();
+  connect();
 }
 
 async function connect() {
@@ -466,10 +601,10 @@ function renderStoreList(apps) {
       </div>
       <div class="app-actions">
         <button class="btn btn-sm ${installed ? 'btn-installed' : ''}"
-          onclick="${installed ? '' : `installApp('${app.name}','${encodeURIComponent(app.url)}','${app.pkg}')`}"
+          onclick="${installed ? '' : (app.playstore ? `openPlayStore('${app.pkg}','${app.name}')` : `installApp('${app.name}','${encodeURIComponent(app.url)}','${app.pkg}')`)}"
           id="install-${key}"
           ${installed ? 'disabled' : ''}>
-          ${installed ? '✓ Installed' : (currentIp ? 'Install' : 'Get')}
+          ${installed ? '✓ Installed' : (app.playstore ? 'Open Play Store' : (currentIp ? 'Install' : 'Get'))}
         </button>
         <div class="progress-wrap" id="progress-wrap-${key}">
           <div class="progress-bar" id="progress-${key}"></div>
@@ -478,6 +613,17 @@ function renderStoreList(apps) {
       </div>
     </div>`;
   }).join('');
+}
+
+async function openPlayStore(pkg, name) {
+  if (!currentIp) { toast('Connect to a TV first!', 'error'); return; }
+  toast(`Opening Play Store for ${name}...`, 'info');
+  try {
+    await adb(`shell am start -a android.intent.action.VIEW -d "market://details?id=${pkg}"`);
+    toast(`Play Store opened on your TV — find and install ${name} there`, 'success');
+  } catch(e) {
+    toast('Could not open Play Store — your TV may not have Google Play (common on Fire TV). See the Guides tab for sideload instructions.', 'error');
+  }
 }
 
 async function installApp(name, encodedUrl, pkg) {
@@ -639,7 +785,12 @@ async function loadApps() {
 
 async function uninstallApp(pkg, name) {
   if (!confirm(`Remove ${name}?`)) return;
-  await adb(`shell pm uninstall --user 0 ${pkg}`);
+  toast(`Removing ${name}...`, 'info');
+  let result = await adb(`uninstall ${pkg}`);
+  if (!result || result.toLowerCase().includes('failure')) {
+    result = await adb(`shell pm uninstall --user 0 ${pkg}`);
+  }
+  await new Promise(r => setTimeout(r, 800));
   toast(`${name} removed`, 'success');
   loadApps();
 }
@@ -647,7 +798,34 @@ async function uninstallApp(pkg, name) {
 function renderGuides() {
   document.getElementById('guides-list').style.display = 'block';
   document.getElementById('guide-detail').style.display = 'none';
-  document.getElementById('guides-list').innerHTML = GUIDES.map(g => `
+
+  const decisionCards = `
+    <div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:0.04em;margin:4px 0 10px">What do you want to watch?</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px">
+      <div style="background:#1c1c1e;border:1px solid #2980b922;border-radius:12px;padding:14px">
+        <div style="font-size:22px;margin-bottom:6px">🎬</div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">Movies and TV</div>
+        <div style="color:#999;font-size:11px;line-height:1.4;margin-bottom:8px">Start with Stremio — looks like Netflix, ready in about 10 minutes.</div>
+        <span style="font-size:10px;padding:3px 8px;border-radius:6px;background:#2980b922;color:#5dade2">Easiest path</span>
+      </div>
+      <div style="background:#1c1c1e;border:1px solid #e67e2222;border-radius:12px;padding:14px">
+        <div style="font-size:22px;margin-bottom:6px">🏆</div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">Live sports</div>
+        <div style="color:#999;font-size:11px;line-height:1.4;margin-bottom:8px">Stremio's sports coverage is limited — use Kodi + The Crew instead.</div>
+        <span style="font-size:10px;padding:3px 8px;border-radius:6px;background:#e67e2222;color:#f0b27a">~20 minutes</span>
+      </div>
+    </div>`;
+
+  let html = decisionCards;
+  let lastSection = null;
+  const sectionLabels = { stremio: 'Movies and TV — Stremio', kodi: 'Best for Live Sports — Kodi' };
+
+  GUIDES.forEach(g => {
+    if (g.section && g.section !== lastSection) {
+      html += `<div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:0.04em;margin:${lastSection ? '22px' : '4px'} 0 10px">${sectionLabels[g.section] || g.section}</div>`;
+      lastSection = g.section;
+    }
+    html += `
     <div class="guide-card" onclick="openGuideDetail('${g.id}')">
       <div class="guide-icon-box" style="background:${g.color}22">${g.icon}</div>
       <div style="flex:1">
@@ -656,7 +834,10 @@ function renderGuides() {
         <div style="color:var(--primary);font-size:11px;margin-top:4px;font-weight:500">${g.steps.length} steps</div>
       </div>
       <span style="color:#333;font-size:20px">›</span>
-    </div>`).join('');
+    </div>`;
+  });
+
+  document.getElementById('guides-list').innerHTML = html;
 }
 
 function openGuideDetail(id) {
@@ -675,7 +856,7 @@ function openGuideDetail(id) {
           <div style="flex:1;font-weight:500;font-size:14px">${s.title}</div>
           <span id="step-arrow-${i}" style="color:#555">▼</span>
         </div>
-        <div class="step-body" id="step-body-${i}">${s.body}</div>
+        <div class="step-body" id="step-body-${i}">${s.body}${s.action ? `<button class="btn btn-sm" style="margin-top:10px" onclick="event.stopPropagation();${s.action.fn}('${s.action.url}','${s.action.name}')">${s.action.label}</button>` : ''}</div>
       </div>`).join('')}`;
 }
 

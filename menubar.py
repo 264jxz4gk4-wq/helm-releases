@@ -10,6 +10,7 @@ import tempfile
 import webbrowser
 import time
 import socket
+import concurrent.futures
 from flask import Flask, request, jsonify, send_from_directory
 from zeroconf import ServiceInfo, Zeroconf
 
@@ -178,6 +179,47 @@ def adb_route():
         except Exception as e:
             return jsonify({'output': '', 'error': str(e)})
     return jsonify({'output': '', 'error': 'Unknown command'})
+
+@flask_app.route('/scan-network', methods=['GET'])
+def scan_network_route():
+    adb = find_adb() or 'adb'
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('8.8.8.8', 80))
+        local_ip = s.getsockname()[0]
+    except Exception:
+        local_ip = '192.168.1.1'
+    finally:
+        s.close()
+
+    subnet = '.'.join(local_ip.split('.')[:3])
+
+    def try_connect(host_num):
+        ip = f'{subnet}.{host_num}'
+        try:
+            result = subprocess.run(
+                [adb, 'connect', f'{ip}:5555'],
+                capture_output=True, text=True, timeout=1.5
+            )
+            if 'connected to' in result.stdout.lower():
+                model = subprocess.run(
+                    [adb, '-s', f'{ip}:5555', 'shell', 'getprop', 'ro.product.model'],
+                    capture_output=True, text=True, timeout=2
+                )
+                return {'ip': ip, 'model': model.stdout.strip() or 'Unknown device'}
+        except Exception:
+            return None
+        return None
+
+    found = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
+        results = executor.map(try_connect, range(1, 255))
+        for r in results:
+            if r:
+                found.append(r)
+
+    return jsonify({'devices': found, 'subnet': subnet})
 
 @flask_app.after_request
 def add_cors(response):
