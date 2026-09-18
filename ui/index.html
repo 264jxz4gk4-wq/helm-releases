@@ -187,9 +187,11 @@ const STORE = [
   // Utility
   { name: 'Downloader', pkg: 'com.esaba.downloader', desc: 'Browse and sideload APKs on your TV — required for Fire TV', icon: '⬇️', category: 'Utility',
     playstore: true },
+  { name: 'Button Mapper', pkg: 'flar2.homebutton', desc: 'Remap your TV remote buttons', icon: '🎮', category: 'Utility', playstore: true },
   // Media Players
   { name: 'Kodi', pkg: 'org.xbmc.kodi', desc: 'Ultimate media center with addons', icon: '🎬', category: 'Media Players',
-    url: 'https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.3-Omega-arm64-v8a.apk' },
+    url: 'https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.3-Omega-arm64-v8a.apk',
+    url_v7a: 'https://mirrors.kodi.tv/releases/android/arm/kodi-21.3-Omega-armeabi-v7a.apk' },
   { name: 'Jellyfin', pkg: 'org.jellyfin.androidtv', desc: 'Stream your personal media library', icon: '🪼', category: 'Media Players',
     url: 'https://github.com/jellyfin/jellyfin-androidtv/releases/download/v0.19.9/jellyfin-androidtv-v0.19.9-release.apk' },
   { name: 'VLC', pkg: 'org.videolan.vlc', desc: 'Universal video player', icon: '🔺', category: 'Media Players',
@@ -199,7 +201,8 @@ const STORE = [
     playstore: true },
   // YouTube
   { name: 'SmartTube', pkg: 'org.smarttube.stable', desc: 'YouTube without ads', icon: '▶️', category: 'YouTube',
-    url: 'https://github.com/yuliskov/SmartTube/releases/download/31.63s/SmartTube_stable_31.63_arm64-v8a.apk' },
+    url: 'https://github.com/yuliskov/SmartTube/releases/download/31.94s/SmartTube_stable_31.94_arm64-v8a.apk',
+    url_v7a: 'https://github.com/yuliskov/SmartTube/releases/download/31.94s/SmartTube_stable_31.94_armeabi-v7a.apk' },
   { name: 'NewPipe', pkg: 'org.schabi.newpipe', desc: 'Lightweight YouTube client', icon: '🟢', category: 'YouTube',
     url: 'https://github.com/TeamNewPipe/NewPipe/releases/download/v0.28.6/NewPipe_v0.28.6.apk' },
   { name: 'Projectivy', pkg: 'com.spocky.projengmenu', desc: 'Best Fire TV launcher', icon: '🚀', category: 'Launchers',
@@ -463,7 +466,89 @@ function renderScanResults(devices) {
           <span style="color:#555;font-size:18px">›</span>
         </div>`).join('')}
       <button class="btn btn-outline" onclick="startNetworkScan()" style="width:100%;margin-top:8px">🔄 Scan again</button>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #222">
+        <div style="color:#888;font-size:12px;margin-bottom:8px">Have an onn. or newer Google TV that wasn't found?</div>
+        <button class="btn btn-outline" onclick="openPairingFlow()" style="width:100%;font-size:13px">🔗 Pair manually with a code</button>
+      </div>
     </div>`;
+}
+
+function openPairingFlow() {
+  document.getElementById('onboarding-content').innerHTML = `
+    <div style="background:#111;border-radius:16px;padding:20px">
+      <button class="btn btn-sm btn-outline" onclick="startNetworkScan()" style="margin-bottom:16px">← Back</button>
+      <h1 style="margin:0 0 6px">Pair with a code</h1>
+      <p style="color:#999;font-size:13px;margin:0 0 20px;line-height:1.5">For onn. and newer Google TV devices that require wireless pairing.</p>
+
+      <div style="background:#1c1c1e;border-radius:12px;padding:16px;margin-bottom:18px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:#ccc">On your TV, go to:</div>
+        <div style="color:#888;font-size:13px;line-height:1.8">
+          Settings → Network & Internet<br>
+          → <strong style="color:#ccc">Wireless debugging</strong> → Turn it ON<br>
+          → Tap <strong style="color:#2980b9">Pair device with pairing code</strong>
+        </div>
+        <div style="margin-top:10px;padding:10px;background:#0d0d0d;border-radius:8px;color:#888;font-size:12px">
+          Your TV will show a <strong style="color:#ccc">6-digit code</strong> and a <strong style="color:#ccc">port number</strong> like <span style="color:#2980b9;font-family:monospace">192.168.1.45:37829</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label style="display:block;color:#888;font-size:12px;margin-bottom:6px">TV IP + port shown on screen</label>
+        <input id="pair-address" type="text" placeholder="e.g. 192.168.1.45:37829"
+          style="width:100%;box-sizing:border-box;background:#1c1c1e;border:1px solid #333;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;outline:none" />
+      </div>
+      <div style="margin-bottom:18px">
+        <label style="display:block;color:#888;font-size:12px;margin-bottom:6px">6-digit pairing code</label>
+        <input id="pair-code" type="text" placeholder="e.g. 123456" maxlength="6"
+          style="width:100%;box-sizing:border-box;background:#1c1c1e;border:1px solid #333;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;outline:none;letter-spacing:0.1em" />
+      </div>
+
+      <button class="btn" onclick="submitPairing()" style="width:100%;background:#2980b9">Pair and connect →</button>
+      <div id="pair-status" style="margin-top:14px;font-size:13px;color:#888;text-align:center"></div>
+    </div>`;
+}
+
+async function submitPairing() {
+  const pairAddress = document.getElementById('pair-address').value.trim();
+  const code = document.getElementById('pair-code').value.trim();
+  const status = document.getElementById('pair-status');
+
+  if (!pairAddress || !pairAddress.includes(':')) {
+    status.style.color = '#e74c3c';
+    status.textContent = 'Enter the full IP:port shown on your TV';
+    return;
+  }
+  if (!code || code.length < 6) {
+    status.style.color = '#e74c3c';
+    status.textContent = 'Enter the 6-digit code shown on your TV';
+    return;
+  }
+
+  status.style.color = '#888';
+  status.textContent = '⏳ Pairing... (this takes up to 15 seconds)';
+
+  try {
+    const res = await fetch(`${API}/pair`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pair_address: pairAddress, code })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      status.style.color = '#27ae60';
+      status.textContent = `✅ Connected to ${data.model} (${data.ip})`;
+      setTimeout(() => {
+        connectFromScan(data.ip);
+      }, 1200);
+    } else {
+      status.style.color = '#e74c3c';
+      status.textContent = `❌ ${data.error || 'Pairing failed — double-check the code and port'}`;
+    }
+  } catch(e) {
+    status.style.color = '#e74c3c';
+    status.textContent = '❌ Could not reach Helm server';
+  }
 }
 
 function connectFromScan(ip) {
@@ -601,7 +686,7 @@ function renderStoreList(apps) {
       </div>
       <div class="app-actions">
         <button class="btn btn-sm ${installed ? 'btn-installed' : ''}"
-          onclick="${installed ? '' : (app.playstore ? `openPlayStore('${app.pkg}','${app.name}')` : `installApp('${app.name}','${encodeURIComponent(app.url)}','${app.pkg}')`)}"
+          onclick="${installed ? '' : (app.playstore ? `openPlayStore('${app.pkg}','${app.name}')` : `installApp('${app.name}','${encodeURIComponent(app.url)}','${app.pkg}'${app.url_v7a ? `,'${encodeURIComponent(app.url_v7a)}'` : ''})`)}"
           id="install-${key}"
           ${installed ? 'disabled' : ''}>
           ${installed ? '✓ Installed' : (app.playstore ? 'Open Play Store' : (currentIp ? 'Install' : 'Get'))}
@@ -626,9 +711,24 @@ async function openPlayStore(pkg, name) {
   }
 }
 
-async function installApp(name, encodedUrl, pkg) {
-  const url = decodeURIComponent(encodedUrl);
+async function installApp(name, encodedUrl, pkg, encodedUrlV7a) {
   if (!currentIp) { toast('Connect to a TV first!', 'error'); return; }
+  let url = decodeURIComponent(encodedUrl);
+  if (encodedUrlV7a) {
+    try {
+      const abiRes = await fetch(`${API}/adb`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: `adb -s ${currentIp}:5555 shell getprop ro.product.cpu.abilist`, ip: currentIp })
+      });
+      const abiData = await abiRes.json();
+      const abilist = (abiData.output || '').trim();
+      if (abilist && !abilist.includes('arm64-v8a')) {
+        url = decodeURIComponent(encodedUrlV7a);
+        console.log('Using armeabi-v7a APK for this device');
+      }
+    } catch(e) { console.log('ABI check failed, using default URL'); }
+  }
   const key = name.replace(/\s/g,'_');
   const btn = document.getElementById('install-' + key);
   const wrap = document.getElementById('progress-wrap-' + key);
