@@ -86,6 +86,79 @@ def connect():
     output = adb(ip, 'shell getprop ro.product.model')
     return jsonify({'output': output.strip(), 'error': ''})
 
+def _do_adb_pair_win(adb_path, pair_address, code, timeout=15):
+    """Attempt adb pair and return (success, output_string)."""
+    try:
+        result = subprocess.run(
+            f'"{adb_path}" pair {pair_address} {code}',
+            shell=True, capture_output=True, text=True, timeout=timeout
+        )
+        out = result.stdout + result.stderr
+        if 'successfully paired' in out.lower():
+            return True, out
+        return False, out
+    except subprocess.TimeoutExpired:
+        return False, 'timeout'
+    except Exception as e:
+        return False, str(e)
+
+@app.route('/pair', methods=['POST'])
+def pair_route():
+    import time as _time
+    data = request.json or {}
+    pair_address = data.get('pair_address', '')
+    code = data.get('code', '')
+    adb_path = get_adb()
+
+    if not pair_address or not code:
+        return jsonify({'success': False, 'error': 'pair_address and code required'})
+
+    ip = pair_address.split(':')[0]
+
+    # Step 1: try pairing normally
+    success, pair_out = _do_adb_pair_win(adb_path, pair_address, code)
+
+    # Step 2: if protocol fault, reset ADB server and retry once
+    if not success and ('protocol fault' in pair_out.lower() or 'error' in pair_out.lower() or 'failed' in pair_out.lower()):
+        try:
+            subprocess.run(f'"{adb_path}" kill-server', shell=True, capture_output=True, timeout=5)
+            _time.sleep(0.5)
+            subprocess.Popen(
+                f'"{adb_path}" nodaemon server',
+                shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            _time.sleep(1.5)
+            success, pair_out = _do_adb_pair_win(adb_path, pair_address, code)
+        except Exception:
+            pass
+
+    if pair_out == 'timeout':
+        return jsonify({'success': False, 'error': 'Pairing timed out — make sure the code on screen matches'})
+
+    if not success:
+        return jsonify({'success': False, 'error': pair_out.strip() or 'Pairing failed — get a fresh code from the TV and try again'})
+
+    # Step 3: connect on port 5555
+    _time.sleep(1)
+    try:
+        conn_result = subprocess.run(
+            f'"{adb_path}" connect {ip}:5555',
+            shell=True, capture_output=True, text=True, timeout=10
+        )
+        conn_out = conn_result.stdout + conn_result.stderr
+        connected = 'connected to' in conn_out.lower()
+        if connected:
+            model_result = subprocess.run(
+                f'"{adb_path}" -s {ip}:5555 shell getprop ro.product.model',
+                shell=True, capture_output=True, text=True, timeout=5
+            )
+            model = model_result.stdout.strip() or 'Unknown device'
+            return jsonify({'success': True, 'ip': ip, 'model': model})
+        else:
+            return jsonify({'success': False, 'error': f'Paired but could not connect: {conn_out.strip()}'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/version')
 def version():
     return jsonify({'version': '1.0.0'})

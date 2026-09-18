@@ -169,7 +169,11 @@ def adb_route():
         ip = body['ip']
         try:
             tmp = tempfile.NamedTemporaryFile(suffix='.apk', delete=False)
-            urllib.request.urlretrieve(url, tmp.name)
+            # Follow redirects (needed for mirror-based URLs like mirrors.kodi.tv)
+            import urllib.request as _ur
+            opener = _ur.build_opener(_ur.HTTPRedirectHandler())
+            with opener.open(url, timeout=60) as resp, open(tmp.name, 'wb') as f:
+                f.write(resp.read())
             result = subprocess.run(
                 [adb, '-s', f'{ip}:5555', 'install', '-r', tmp.name],
                 capture_output=True, text=True, timeout=120
@@ -220,6 +224,55 @@ def scan_network_route():
                 found.append(r)
 
     return jsonify({'devices': found, 'subnet': subnet})
+
+@flask_app.route('/pair', methods=['POST'])
+def pair_route():
+    data = request.json or {}
+    pair_address = data.get('pair_address', '')  # e.g. "192.168.1.45:37829"
+    code = data.get('code', '')                  # e.g. "123456"
+    adb = find_adb() or 'adb'
+
+    if not pair_address or not code:
+        return jsonify({'success': False, 'error': 'pair_address and code required'})
+
+    ip = pair_address.split(':')[0]
+
+    # Step 1: pair
+    try:
+        pair_result = subprocess.run(
+            [adb, 'pair', pair_address, code],
+            capture_output=True, text=True, timeout=15
+        )
+        pair_out = pair_result.stdout + pair_result.stderr
+        if 'failed' in pair_out.lower() or 'error' in pair_out.lower():
+            return jsonify({'success': False, 'error': pair_out.strip()})
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'Pairing timed out — make sure the code on screen matches'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+    # Step 2: connect (standard port 5555 opens after pairing)
+    import time as _time
+    _time.sleep(1)
+    try:
+        conn_result = subprocess.run(
+            [adb, 'connect', f'{ip}:5555'],
+            capture_output=True, text=True, timeout=10
+        )
+        conn_out = conn_result.stdout + conn_result.stderr
+        connected = 'connected to' in conn_out.lower()
+
+        if connected:
+            model_result = subprocess.run(
+                [adb, '-s', f'{ip}:5555', 'shell', 'getprop', 'ro.product.model'],
+                capture_output=True, text=True, timeout=5
+            )
+            model = model_result.stdout.strip() or 'Unknown device'
+            return jsonify({'success': True, 'ip': ip, 'model': model})
+        else:
+            return jsonify({'success': False, 'error': f'Paired but could not connect: {conn_out.strip()}'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @flask_app.after_request
 def add_cors(response):
