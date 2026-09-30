@@ -1,6 +1,7 @@
 package com.helm.tv
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
@@ -9,8 +10,6 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AppCompatActivity
 import java.net.InetSocketAddress
 import java.net.Socket
 
@@ -18,7 +17,7 @@ import java.net.Socket
  * The whole UI is ui/index.html from the desktop app, served by HelmServer
  * on loopback and shown here.
  */
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
 
     companion object {
         private const val TAG = "HelmWeb"
@@ -55,12 +54,12 @@ class MainActivity : AppCompatActivity() {
         }
         setContentView(webView)
         loadWhenReady()
+    }
 
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (webView.canGoBack()) webView.goBack() else finish()
-            }
-        })
+    @Deprecated("Superseded by OnBackPressedDispatcher on Android 13+, but that needs androidx, which needs Android 5+")
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (webView.canGoBack()) webView.goBack() else super.onBackPressed()
     }
 
     /**

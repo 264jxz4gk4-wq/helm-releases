@@ -1,5 +1,7 @@
 <resources>
-    <style name="Theme.Helm" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <!-- DeviceDefault exists on every Android version from 4.0 up
+         (Holo on 4.4, Material on 5+); no androidx needed. -->
+    <style name="Theme.Helm" parent="android:Theme.DeviceDefault.NoActionBar">
         <item name="android:windowBackground">#0b0f14</item>
     </style>
 </resources>

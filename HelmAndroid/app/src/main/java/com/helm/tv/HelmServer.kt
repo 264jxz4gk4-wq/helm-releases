@@ -42,7 +42,7 @@ class HelmServer(
         return try {
             when {
                 session.method == Method.GET && session.uri == "/" ->
-                    asset("ui/index.html", "text/html; charset=utf-8")
+                    asset(uiFor(session.headers["user-agent"]), "text/html; charset=utf-8")
 
                 session.method == Method.GET && session.uri == "/status" -> json(
                     JSONObject()
@@ -121,6 +121,18 @@ class HelmServer(
     }
 
     // ---- helpers ----------------------------------------------------------
+
+    /**
+     * Two builds of the same UI (see tools/sync-ui.mjs): Chrome 51+ gets the
+     * modern one; anything older - Android 4.4's WebView is Chromium 30-33
+     * and can't be updated - gets the ES5 legacy build.
+     */
+    private fun uiFor(userAgent: String?): String {
+        val chrome = userAgent?.let { Regex("Chrome/(\\d+)").find(it)?.groupValues?.get(1)?.toIntOrNull() }
+        val page = if (chrome != null && chrome >= 51) "ui/index.html" else "ui/index-legacy.html"
+        Log.i(TAG, "WebView Chrome/${chrome ?: "?"} -> $page")
+        return page
+    }
 
     /**
      * DNS rebinding needs the browser to send a *hostname* that resolves to

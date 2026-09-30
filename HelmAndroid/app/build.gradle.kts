@@ -28,16 +28,16 @@ android {
 
     defaultConfig {
         applicationId = "com.helm.tv"
-        // 21 = Android 5.0. The target tablet (Galaxy Tab 3 7.0 on LineageOS)
-        // runs Android 7; this leaves headroom for older hardware too.
-        minSdk = 21
+        // 19 = Android 4.4 KitKat. The target tablet, a Galaxy Tab 3 7.0, runs
+        // CyanogenMod 11 (Android 4.4.4). No androidx: appcompat needs 21.
+        minSdk = 19
         targetSdk = 34
         versionCode = helmVersionCode
         versionName = helmVersion
 
         ndk {
-            // Only ABIs we ship an adb binary for. The Tab 3's PXA988 is a
-            // 32-bit Cortex-A9, so armeabi-v7a is the one that matters.
+            // Only ABIs we ship an adb binary for (this also trims Conscrypt's
+            // x86 libraries). The Tab 3's PXA988 is a 32-bit Cortex-A9.
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")
         }
     }
@@ -49,7 +49,7 @@ android {
                 storePassword = System.getenv("HELM_KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("HELM_KEY_ALIAS")
                 keyPassword = System.getenv("HELM_KEY_PASSWORD")
-                enableV1Signing = true   // required for Android < 7.0
+                enableV1Signing = true   // the only scheme Android < 7.0 checks
                 enableV2Signing = true
             }
         }
@@ -100,13 +100,16 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
 
     // Embedded HTTP server. NanoHTTPD is one small jar, runs on any Android
     // version, and uses a thread per request - which suits blocking adb calls
     // and a 1 GB device far better than a coroutine server stack.
     implementation("org.nanohttpd:nanohttpd:2.3.1")
+
+    // Modern TLS for APK downloads on Android 4.4 only (see Tls.kt). 2.5.2 is
+    // the last Conscrypt release that supports pre-Lollipop Android; 2.6+
+    // requires API 21.
+    implementation("org.conscrypt:conscrypt-android:2.5.2")
 }
 
 // ---------------------------------------------------------------------------

@@ -4,8 +4,8 @@ Helm running entirely on an Android phone, tablet or TV box: connect to
 Fire TV / Google TV / Android TV over Wi-Fi, pair, install apps, and manage
 them, with no Mac or PC involved.
 
-Built and tested for a **Galaxy Tab 3 7.0 (SM-T210R) on LineageOS** - 32-bit
-ARM, Android 7, 1 GB RAM - and runs on anything from Android 5.0 up.
+Built for a **Galaxy Tab 3 7.0 (SM-T210R) on CyanogenMod 11** - Android 4.4.4,
+32-bit ARM, 1 GB RAM - and runs on anything from **Android 4.4 KitKat** up.
 
 ## Install
 
@@ -39,15 +39,38 @@ wireless-debugging pairing works exactly as it does on the desktop.
 
 ### What the build does to the shared UI
 
-`tools/sync-ui.mjs` copies `../ui/index.html` into the APK and makes it safe
-for old WebViews: it downlevels the JavaScript to Chrome 51 (Android 7's
-original WebView) and adds polyfills for `NodeList.forEach` (tab switching),
-`Object.entries` (device naming) and friends. It then **verifies** the result
-parses as plain ES2015, that every function the HTML calls still exists, and
-that no inline `onclick` uses newer syntax. Any failure stops the build.
+`tools/sync-ui.mjs` copies `../ui/index.html` into the APK as two builds, and
+`HelmServer` serves one per request based on the WebView's Chrome version:
+
+* **`index.html`** (Chrome 51+, Android 7 and newer): JavaScript downleveled
+  with esbuild, plus polyfills for `NodeList.forEach` (tab switching) and
+  `Object.entries` (device naming). Verified to parse as ES2015.
+* **`index-legacy.html`** (Chrome 30-50, Android 4.4-6; `tools/legacy.mjs`):
+  Android 4.4's WebView is Chromium 30-33 and can never be updated. The
+  JavaScript is compiled to ES5 with Babel; the polyfills are exactly the
+  core-js modules Babel detects the UI using, plus `fetch`. CSS variables and
+  8-digit hex colours are resolved and `-webkit-` prefixes added. Because
+  `applyTheme()` recolours the UI per device by setting CSS variables, a small
+  shim re-renders the stylesheet in place from a template when it does.
+  Verified to parse as ES5.
+
+Both builds also check that every function the HTML calls still exists and
+that no inline `onclick` uses syntax the target can't run. Any failure stops
+the build. In testing, the legacy build rendered pixel-identical to the
+desktop UI with `fetch`, `Promise`, `Symbol`, `Object.assign` and
+`NodeList.forEach` deleted from the page first.
 
 It also fails if `ui/index.html` stops declaring
 `const API = 'http://localhost:5001'`, since the Android server depends on it.
+
+### Downloads on old Android
+
+Android 4.4 can't talk to most current HTTPS servers (TLS 1.2 off by default,
+no modern ciphers, outdated root certificates). `Tls.kt` fixes that for APK
+downloads: on 4.4 it uses Conscrypt 2.5.2 (the last release supporting
+pre-Lollipop) for TLS 1.2/1.3, and on Android 7.1 and older it adds Mozilla's
+current root list (`res/raw/cacerts.pem`, via certifi) to the device's own
+roots. Android 8+ uses the system unchanged.
 
 ### Security model
 
@@ -121,5 +144,5 @@ adb -s <tablet-serial> logcat -s HelmService HelmServer HelmAdb HelmWeb
   step (shown on the main Wireless debugging screen). The Android server
   already accepts an optional `connect_address` for this; the shared UI
   doesn't send it yet.
-* On a very old WebView, CSS flex `gap` isn't supported, so some items sit
-  closer together. Cosmetic only.
+* On Android 4.4-6, CSS flex `gap` isn't supported, so some items sit closer
+  together. Cosmetic only.

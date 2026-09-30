@@ -283,7 +283,8 @@ class AdbManager(private val context: Context) {
     /**
      * Download an APK then `adb install -r` it, like the desktop route.
      * Streams to disk rather than memory: the Tab 3 has 1 GB of RAM and
-     * Kodi alone is ~80 MB.
+     * Kodi alone is ~80 MB. HTTPS goes through [Tls], which is what makes
+     * downloads work at all on Android 4.4.
      */
     fun installFromUrl(url: String, ipRaw: String): Result {
         val ip = ipRaw.substringBefore(':').trim()
@@ -300,6 +301,9 @@ class AdbManager(private val context: Context) {
             // http -> https hop on its own, and mirror hosts do exactly that.
             while (true) {
                 conn = (current.openConnection() as HttpURLConnection).apply {
+                    if (this is javax.net.ssl.HttpsURLConnection) {
+                        Tls.socketFactory(context)?.let { sslSocketFactory = it }
+                    }
                     instanceFollowRedirects = false
                     connectTimeout = 30_000
                     readTimeout = 120_000

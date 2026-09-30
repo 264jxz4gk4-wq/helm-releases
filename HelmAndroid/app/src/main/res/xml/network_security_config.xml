@@ -1,14 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <!-- Helm talks to TVs on the LAN over plain ADB, and to its own loopback
-         server, so cleartext is needed. Downloads still use HTTPS. -->
-    <base-config cleartextTrafficPermitted="true">
-        <trust-anchors>
-            <certificates src="system" />
-            <!-- Let's Encrypt's root. Android only trusts it from 7.1.1 on;
-                 bundling it keeps APK downloads from Let's Encrypt-hosted
-                 mirrors working on Android 7.0 devices too. -->
-            <certificates src="@raw/isrg_root_x1" />
-        </trust-anchors>
-    </base-config>
+         server, so cleartext is needed. APK downloads use HTTPS via Tls.kt,
+         which also supplies current root certificates on older Android. -->
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>
