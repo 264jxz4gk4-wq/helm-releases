@@ -1,6 +1,11 @@
 ## Helm — Universal TV Manager
 
-### What's New in 1.2.2
+### What's New in 1.2.3
+- **Installs report what really happened.** Helm used to show "Installed!" whenever the error didn't contain one particular word, so a failed download looked like success. It now requires the TV to confirm the install, and says why when it doesn't (couldn't download, not enough space, wrong processor type, and so on).
+- **Helm for Android:** fixes app downloads failing on Android 4.4 with a certificate error.
+- Clearer advice when a TV hasn't approved your device yet.
+
+### 1.2.2
 - **Connecting tells you what's wrong.** Helm used to say "Connected" even when the TV refused it, then show an empty app list. It now checks that the TV actually responds, and says why when it doesn't: the TV is waiting for you to approve the device, it needs pairing, debugging is off, or it can't be reached on your Wi-Fi.
 - Typing an address with the port (like `192.168.1.78:5555`) now works.
 - **Helm for Android:** fixes the built-in adb failing to start on Android 4.4 devices, which left every TV unreachable.
