@@ -344,8 +344,9 @@ function helmError(msg) { const e = new Error(msg); e.helm = true; return e; }
 // Turn adb's wording into something a person can act on.
 function connectProblem(ip, text) {
   const t = (text || '').toLowerCase();
-  if (t.includes('unauthorized')) return `Approve this device on your TV: accept the "Allow debugging" prompt on the TV screen, then tap Connect again`;
-  if (t.includes('failed to authenticate')) return `${ip} needs pairing first. Use Pair with a code`;
+  // adb says "failed to authenticate" on connect and "unauthorized" afterwards;
+  // both mean the TV hasn't approved this device's key yet.
+  if (t.includes('unauthorized') || t.includes('failed to authenticate')) return `Approve this device on your TV: accept the "Allow debugging" prompt on the TV screen, then tap Connect again. No prompt? Use Pair with a code`;
   if (t.includes('refused')) return `${ip} refused the connection. Turn on network / wireless debugging on the TV, or use Pair with a code`;
   if (t.includes('no route') || t.includes('timed out') || t.includes('unreachable')) return `Can't reach ${ip}. Check the IP address and that both devices are on the same Wi-Fi`;
   if (t.includes('offline')) return `${ip} is offline. Turn debugging off and on again on the TV, then reconnect`;
@@ -756,6 +757,30 @@ async function openPlayStore(pkg, name) {
   }
 }
 
+// Why an install didn't happen, in words a person can act on.
+function installProblem(text) {
+  const t = text || '';
+  const dl = t.match(/download failed:?\s*([^\n]*)/i);
+  if (dl) {
+    if (/trust anchor|certificate|handshake|ssl/i.test(dl[1])) return "couldn't download it securely (certificate check failed)";
+    if (/HTTP (\d+)/.test(dl[1])) return `the download link returned an error (${dl[1].match(/HTTP \d+/)[0]})`;
+    return `couldn't download it (${dl[1].slice(0, 100) || 'network error'})`;
+  }
+  const code = (t.match(/INSTALL_[A-Z_]+/) || [])[0];
+  const why = {
+    INSTALL_FAILED_NO_MATCHING_ABIS: "this build doesn't support your TV's processor",
+    INSTALL_FAILED_INSUFFICIENT_STORAGE: 'not enough free space on the TV',
+    INSTALL_FAILED_UPDATE_INCOMPATIBLE: 'a different copy is already installed; remove it first',
+    INSTALL_FAILED_VERSION_DOWNGRADE: 'a newer version is already installed',
+    INSTALL_FAILED_OLDER_SDK: 'the TV runs an Android version this app does not support',
+    INSTALL_PARSE_FAILED_NOT_APK: 'the download was not an app file',
+  }[code];
+  if (why) return why;
+  if (code) return code;
+  const line = t.split('\n').map(l => l.trim()).filter(Boolean).pop();
+  return line ? line.slice(0, 140) : 'no response from the TV';
+}
+
 async function installApp(name, encodedUrl, pkg, encodedUrlV7a) {
   if (!currentIp) { toast('Connect to a TV first!', 'error'); return; }
   let url = decodeURIComponent(encodedUrl);
@@ -803,12 +828,16 @@ async function installApp(name, encodedUrl, pkg, encodedUrlV7a) {
     });
     clearInterval(interval);
     const data = await res.json();
+    const result = `${data.output || ''}\n${data.error || ''}`;
+    // adb prints "Success" only when the TV accepted the app. Anything else -
+    // a failed download included - is a failure, however it's worded.
+    const succeeded = /\bSuccess\b/.test(result) && !/Failure \[|INSTALL_FAILED|download failed/i.test(result);
 
-    if (data.error && data.error.includes('FAILED')) {
+    if (!succeeded) {
       bar.style.width = '100%';
       bar.style.background = '#c0392b';
       label.textContent = 'Install failed';
-      toast(`${name} install failed — ${data.error}`, 'error');
+      toast(`${name} install failed: ${installProblem(result)}`, 'error');
     } else {
       bar.style.width = '100%';
       label.textContent = '✓ Installed!';
