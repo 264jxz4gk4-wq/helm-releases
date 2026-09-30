@@ -101,6 +101,14 @@ class AdbManager(private val context: Context) {
                     put("HOME", adbHome.absolutePath)
                     put("TMPDIR", context.cacheDir.absolutePath)
                     put("ANDROID_ADB_SERVER_PORT", ADB_SERVER_PORT)
+                    // Both are required on Android 4.4: the adb server's USB
+                    // and mDNS start-up each trip bionic's fdsan check on the
+                    // Tab 3's 3.4 kernel and abort the server ("failed to
+                    // start daemon"). Verified on the device: it starts only
+                    // with both off. Helm needs neither - an app can't use
+                    // USB, and TVs are always reached by IP address.
+                    put("ADB_USB", "0")
+                    put("ADB_MDNS", "0")
                 }
                 directory(adbHome)
             }.start()
@@ -136,11 +144,22 @@ class AdbManager(private val context: Context) {
         outThread.join(2000)
         errThread.join(2000)
 
-        return if (timedOut.get()) {
+        val result = if (timedOut.get()) {
             Result(out.toString(), "Timed out after ${timeoutSec}s", -2)
         } else {
             Result(out.toString(), err.toString(), code)
         }
+        logCall(args, result)
+        return result
+    }
+
+    /** One line per adb call in logcat (tag HelmAdb); pairing codes are masked. */
+    private fun logCall(args: Array<out String>, r: Result) {
+        val shown = args.toMutableList()
+        val i = shown.indexOf("pair")
+        if (i >= 0 && i + 2 < shown.size) shown[i + 2] = "******"
+        val detail = (r.error.ifBlank { r.output }).lineSequence().firstOrNull { it.isNotBlank() }?.take(160) ?: ""
+        Log.i(TAG, "adb ${shown.joinToString(" ")} -> exit=${r.exitCode} $detail")
     }
 
     private fun drain(stream: InputStream, into: StringBuilder): Thread =

@@ -58,7 +58,10 @@ class HelmService : Service() {
         Thread {
             val v = adb.version()
             Log.i(TAG, "bundled adb: exit=${v.exitCode} ${v.combined.lineSequence().firstOrNull()}")
-            if (adb.isAvailable) adb.startServer()
+            if (adb.isAvailable) {
+                val r = adb.startServer()
+                Log.i(TAG, "adb server start: exit=${r.exitCode} ${r.combined.lineSequence().lastOrNull() ?: ""}")
+            }
         }.apply { isDaemon = true }.start()
     }
 
