@@ -1,7 +1,7 @@
 {
-  "version": "1.2.0",
-  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.0/HelmMac.zip",
-  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.0/HelmWindows.zip",
-  "notes": "Helm for Android (runs on the tablet, no computer needed), security fixes for the desktop server",
-  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.0/Helm.apk"
+  "version": "1.2.1",
+  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.1/HelmMac.zip",
+  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.1/HelmWindows.zip",
+  "notes": "Helm for Android now runs on Android 4.4 KitKat and newer",
+  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.1/Helm.apk"
 }
