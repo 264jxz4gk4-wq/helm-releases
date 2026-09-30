@@ -1,0 +1,13 @@
+{
+  "name": "helm-android-tools",
+  "private": true,
+  "description": "Build helpers for Helm for Android: copies the shared desktop UI into the APK and downlevels its JavaScript for old Android WebViews.",
+  "type": "module",
+  "scripts": {
+    "sync-ui": "node sync-ui.mjs"
+  },
+  "devDependencies": {
+    "acorn": "8.14.1",
+    "esbuild": "0.25.10"
+  }
+}

@@ -1,0 +1,15 @@
+*.iml
+.gradle/
+local.properties
+.idea/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Generated at build time - never edit or commit these:
+#   node tools/sync-ui.mjs   -> copies + downlevels ../ui/index.html
+#   bash tools/fetch-adb.sh  -> downloads the pinned, checksum-verified adb
+app/src/main/assets/ui/
+app/src/main/jniLibs/
+tools/node_modules/

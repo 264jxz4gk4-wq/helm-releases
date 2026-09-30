@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Helm</string>
+    <string name="channel_name">Helm Server</string>
+    <string name="server_running">Helm is running on port 5001</string>
+</resources>

@@ -5,3 +5,8 @@ build/
 .DS_Store
 __pycache__/
 *.pyc
+
+# Android release signing key - NEVER commit (backup copy lives here locally)
+.signing/
+# temporary transfer archives
+.helm-*.tgz
