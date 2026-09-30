@@ -339,6 +339,50 @@ function showPage(page, e) {
   if (page === 'guides') renderGuides();
 }
 
+function helmError(msg) { const e = new Error(msg); e.helm = true; return e; }
+
+// Turn adb's wording into something a person can act on.
+function connectProblem(ip, text) {
+  const t = (text || '').toLowerCase();
+  if (t.includes('unauthorized')) return `Approve this device on your TV: accept the "Allow debugging" prompt on the TV screen, then tap Connect again`;
+  if (t.includes('failed to authenticate')) return `${ip} needs pairing first. Use Pair with a code`;
+  if (t.includes('refused')) return `${ip} refused the connection. Turn on network / wireless debugging on the TV, or use Pair with a code`;
+  if (t.includes('no route') || t.includes('timed out') || t.includes('unreachable')) return `Can't reach ${ip}. Check the IP address and that both devices are on the same Wi-Fi`;
+  if (t.includes('offline')) return `${ip} is offline. Turn debugging off and on again on the TV, then reconnect`;
+  return `Couldn't connect to ${ip}${text ? ': ' + text : ''}`;
+}
+
+async function adbRaw(command) {
+  const res = await fetch(`${API}/adb`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command })
+  });
+  const data = await res.json();
+  return { output: (data.output || '').trim(), error: (data.error || '').trim() };
+}
+
+// Connect to ip:5555 and make sure the TV actually accepts commands. A TCP
+// connection can succeed while the TV still refuses them (e.g. until someone
+// accepts the "Allow debugging" prompt), so ask it to echo something back.
+// Throws a helmError with a readable reason on failure.
+async function openConnection(ip) {
+  const conn = await adbRaw(`adb connect ${ip}:5555`);
+  const connText = `${conn.output} ${conn.error}`.trim();
+  if (!/connected to/i.test(connText) || /failed|unable|cannot|refused/i.test(connText)) {
+    throw helmError(connectProblem(ip, connText));
+  }
+  let last = '';
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const probe = await adbRaw(`adb -s ${ip}:5555 shell echo helm-ok`);
+    if (probe.output.includes('helm-ok')) return;
+    last = `${probe.error} ${probe.output}`.trim();
+    if (/unauthorized/i.test(last)) break;          // needs a person at the TV
+    await new Promise(r => setTimeout(r, 700));     // "offline"/"authorizing" settles quickly
+  }
+  throw helmError(connectProblem(ip, last || 'the TV did not respond'));
+}
+
 async function adb(command) {
   const res = await fetch(`${API}/adb`, {
     method: 'POST',
@@ -558,14 +602,14 @@ function connectFromScan(ip) {
 }
 
 async function connect() {
-  const ip = document.getElementById('ip-input').value.trim();
+  // Accept "192.168.1.78" or "192.168.1.78:5555" - Helm connects on 5555.
+  const ip = document.getElementById('ip-input').value.trim().replace(/:\d+$/, '');
   if (!ip) { toast('Enter an IP address first', 'error'); return; }
   const btn = document.getElementById('connect-btn');
   btn.textContent = 'Connecting...';
   btn.disabled = true;
   try {
-    await fetch(`${API}/adb`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ command: `adb connect ${ip}:5555` }) });
-    await new Promise(r => setTimeout(r, 1500));
+    await openConnection(ip);
     currentIp = ip;
     const mfr = (await adb('shell getprop ro.product.manufacturer')).toLowerCase().trim();
     const model = (await adb('shell getprop ro.product.model')).trim();
@@ -591,7 +635,7 @@ async function connect() {
     toast(`Connected to ${friendlyName}`, 'success');
     loadInstalledPackages();
   } catch(e) {
-    toast('Connection failed — check IP and WiFi', 'error');
+    toast(e && e.helm ? e.message : 'Connection failed — check IP and WiFi', 'error');
   }
   btn.textContent = 'Connect';
   btn.disabled = false;
@@ -639,19 +683,20 @@ function renderSavedDevices() {
 }
 
 async function quickConnect(ip, name, type) {
+  try {
+    await openConnection(ip);
+  } catch (e) {
+    toast(e && e.helm ? e.message : 'Connection failed', 'error');
+    return;
+  }
   currentIp = ip;
   currentDeviceType = type;
   localStorage.setItem('lastIp', ip);
   localStorage.setItem('deviceType', type);
   applyTheme(type);
-  try {
-    await fetch(`${API}/adb`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ command: `adb connect ${ip}:5555` }) });
-    showConnected(name, ip);
-    toast(`Connected to ${name}`, 'success');
-    loadInstalledPackages();
-  } catch {
-    toast('Connection failed', 'error');
-  }
+  showConnected(name, ip);
+  toast(`Connected to ${name}`, 'success');
+  loadInstalledPackages();
 }
 
 function renderStore() {
