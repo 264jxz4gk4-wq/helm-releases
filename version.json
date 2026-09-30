@@ -1,7 +1,7 @@
 {
-  "version": "1.2.1",
-  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.1/HelmMac.zip",
-  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.1/HelmWindows.zip",
-  "notes": "Helm for Android now runs on Android 4.4 KitKat and newer",
-  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.1/Helm.apk"
+  "version": "1.2.2",
+  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.2/HelmMac.zip",
+  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.2/HelmWindows.zip",
+  "notes": "Connect now tells you why a TV can't be reached; fixes Helm for Android on Android 4.4",
+  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.2/Helm.apk"
 }

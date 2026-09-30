@@ -1,6 +1,11 @@
 ## Helm — Universal TV Manager
 
-### What's New in 1.2.1
+### What's New in 1.2.2
+- **Connecting tells you what's wrong.** Helm used to say "Connected" even when the TV refused it, then show an empty app list. It now checks that the TV actually responds, and says why when it doesn't: the TV is waiting for you to approve the device, it needs pairing, debugging is off, or it can't be reached on your Wi-Fi.
+- Typing an address with the port (like `192.168.1.78:5555`) now works.
+- **Helm for Android:** fixes the built-in adb failing to start on Android 4.4 devices, which left every TV unreachable.
+
+### 1.2.1
 - **Helm for Android now runs on Android 4.4 (KitKat) and newer**, including older tablets like the Galaxy Tab 3. On older devices Helm brings its own up-to-date security for app downloads, so installs work even where the device's browser can't open modern websites.
 
 ### 1.2.0
