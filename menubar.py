@@ -1,6 +1,7 @@
 import rumps
 import sys
 import subprocess
+import ipaddress
 import threading
 import shutil
 import os
@@ -20,9 +21,38 @@ def resource_path(relative_path):
     return os.path.join(BASE_DIR, relative_path)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UI_DIR = os.path.join(BASE_DIR, 'ui')
-CURRENT_VERSION = "1.0.0"
+CURRENT_VERSION = "1.1.0"
 VERSION_URL = "https://raw.githubusercontent.com/264jxz4gk4-wq/helm-releases/main/version.json"
 PORT = 5001
+
+# ── Security: constrain /adb to real adb invocations ────────────────────────
+# The /adb route used to pass any string that did not start with "adb " to
+# subprocess untouched, which made it an arbitrary-command endpoint.
+ALLOWED_ADB_SUBCOMMANDS = {
+    'connect', 'disconnect', 'reconnect', 'devices', 'shell', 'install',
+    'uninstall', 'pair', 'get-state', 'start-server', 'kill-server',
+    'wait-for-device', 'forward', 'reverse', 'push', 'pull', 'reboot',
+    'root', 'unroot', 'tcpip', 'usb',
+}
+_ADB_FLAGS_WITH_VALUE = {'-s', '-P', '-H', '-L', '-t'}
+
+def validate_adb_command(raw):
+    """Return (ok, argv_after_adb, error). Never returns a program name."""
+    cmd = (raw or '').strip()
+    if not cmd.startswith('adb '):
+        return False, None, 'only adb commands are allowed'
+    args = cmd[4:].split()
+    if not args:
+        return False, None, 'empty adb command'
+    i = 0
+    while i < len(args) and args[i].startswith('-'):
+        i += 2 if args[i] in _ADB_FLAGS_WITH_VALUE else 1
+    if i >= len(args):
+        return False, None, 'no adb subcommand given'
+    if args[i] not in ALLOWED_ADB_SUBCOMMANDS:
+        return False, None, 'adb subcommand not allowed: %s' % args[i]
+    return True, args, None
+
 LAUNCH_AGENT_PATH = os.path.expanduser('~/Library/LaunchAgents/com.helm.server.plist')
 
 def get_local_ip():
@@ -146,21 +176,16 @@ def install_adb_route():
     result = install_adb()
     return jsonify({'success': result is not None, 'adb_path': result})
 
-@flask_app.route('/adb', methods=['POST', 'OPTIONS'])
+@flask_app.route('/adb', methods=['POST'])
 def adb_route():
-    if request.method == 'OPTIONS':
-        resp = flask_app.make_default_options_response()
-        resp.headers['Access-Control-Allow-Origin'] = '*'
-        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-        return resp
-    body = request.json
+    body = request.json or {}
     adb = find_adb() or 'adb'
     if 'command' in body:
-        cmd = body['command']
-        if cmd.startswith('adb '):
-            cmd = adb + cmd[3:]
+        ok, args, err = validate_adb_command(body['command'])
+        if not ok:
+            return jsonify({'output': '', 'error': err}), 400
         try:
-            result = subprocess.run(cmd.split(), capture_output=True, text=True, timeout=30)
+            result = subprocess.run([adb] + args, capture_output=True, text=True, timeout=30)
             return jsonify({'output': result.stdout, 'error': result.stderr})
         except Exception as e:
             return jsonify({'output': '', 'error': str(e)})
@@ -274,11 +299,25 @@ def pair_route():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-@flask_app.after_request
-def add_cors(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-    return response
+@flask_app.before_request
+def block_dns_rebinding():
+    # No CORS headers are sent at all: the UI is served by this same server
+    # (same origin), and the React Native app is not a browser so CORS does
+    # not apply to it. Without a wildcard ACAO header, a hostile web page
+    # cannot read our responses -- but it could still reach us by pointing
+    # its own domain at 127.0.0.1 (DNS rebinding), so check Host directly.
+    # DNS rebinding works by getting the browser to send a *hostname* that
+    # resolves to us. A bare IP literal in Host cannot be rebound that way,
+    # so allow any IP and reject names. This also avoids breaking users on
+    # unusual LAN ranges (Tailscale's 100.x, and so on).
+    host = (request.host or '').split(':')[0].strip('[]')
+    if host in ('localhost', '::1'):
+        return None
+    try:
+        ipaddress.ip_address(host)
+        return None
+    except ValueError:
+        return jsonify({'error': 'invalid Host header'}), 403
 
 class HelmServer(rumps.App):
     def __init__(self):

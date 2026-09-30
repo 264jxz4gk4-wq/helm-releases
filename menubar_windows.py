@@ -1,6 +1,7 @@
 import threading
 import webbrowser
 import subprocess
+import ipaddress
 import os
 import sys
 import requests
@@ -29,13 +30,84 @@ ADB = None  # resolved lazily
 UI_DIR = None  # resolved lazily
 
 # ── Flask ───────────────────────────────────────────────────────────────────
+
+# ── Security helpers ────────────────────────────────────────────────────────
+# Everything here used to run through `shell=True` with caller-supplied
+# strings interpolated in, so /adb was a remote shell for anyone on the LAN.
+import re as _re
+
+ALLOWED_ADB_SUBCOMMANDS = {
+    'connect', 'disconnect', 'reconnect', 'devices', 'shell', 'install',
+    'uninstall', 'pair', 'get-state', 'start-server', 'kill-server',
+    'wait-for-device', 'forward', 'reverse', 'push', 'pull', 'reboot',
+    'root', 'unroot', 'tcpip', 'usb',
+}
+_ADB_FLAGS_WITH_VALUE = {'-s', '-P', '-H', '-L', '-t'}
+_IP_RE = _re.compile(r'^[0-9]{1,3}(\.[0-9]{1,3}){3}$')
+_PAIR_RE = _re.compile(r'^[0-9]{1,3}(\.[0-9]{1,3}){3}:[0-9]{1,5}$')
+_CODE_RE = _re.compile(r'^[0-9]{6}$')
+
+def safe_pair_address(value):
+    value = (value or '').strip()
+    return value if _PAIR_RE.match(value) else None
+
+def safe_pair_code(value):
+    value = (value or '').strip()
+    return value if _CODE_RE.match(value) else None
+
+def validate_adb_command(raw):
+    """Return (ok, argv_after_adb, error). Never returns a program name."""
+    cmd = (raw or '').strip()
+    if not cmd.startswith('adb '):
+        return False, None, 'only adb commands are allowed'
+    args = cmd[4:].split()
+    if not args:
+        return False, None, 'empty adb command'
+    i = 0
+    while i < len(args) and args[i].startswith('-'):
+        i += 2 if args[i] in _ADB_FLAGS_WITH_VALUE else 1
+    if i >= len(args):
+        return False, None, 'no adb subcommand given'
+    if args[i] not in ALLOWED_ADB_SUBCOMMANDS:
+        return False, None, 'adb subcommand not allowed: %s' % args[i]
+    return True, args, None
+
+def safe_ip(value):
+    """Only dotted-quad addresses reach a subprocess argument list."""
+    value = (value or '').split(':')[0].strip()
+    return value if _IP_RE.match(value) else None
+
+
 app = Flask(__name__)
 
 def adb(ip, cmd):
-    adb_path = get_adb()
-    full = f'{adb_path} -s {ip}:5555 {cmd}'
-    result = subprocess.run(full, shell=True, capture_output=True, text=True, timeout=60)
+    ip = safe_ip(ip)
+    if not ip:
+        return 'error: invalid ip'
+    args = (cmd or '').split()
+    if not args or args[0] not in ALLOWED_ADB_SUBCOMMANDS:
+        return 'error: adb subcommand not allowed'
+    result = subprocess.run(
+        [get_adb(), '-s', f'{ip}:5555'] + args,
+        capture_output=True, text=True, timeout=60
+    )
     return result.stdout + result.stderr
+
+
+@app.before_request
+def block_dns_rebinding():
+    # DNS rebinding works by getting the browser to send a *hostname* that
+    # resolves to us. A bare IP literal in Host cannot be rebound that way,
+    # so allow any IP and reject names. This also avoids breaking users on
+    # unusual LAN ranges (Tailscale's 100.x, and so on).
+    host = (request.host or '').split(':')[0].strip('[]')
+    if host in ('localhost', '::1'):
+        return None
+    try:
+        ipaddress.ip_address(host)
+        return None
+    except ValueError:
+        return jsonify({'error': 'invalid Host header'}), 403
 
 @app.route('/')
 def index():
@@ -53,23 +125,27 @@ def adb_route():
             import tempfile, urllib.request
             with tempfile.NamedTemporaryFile(suffix='.apk', delete=False) as f:
                 tmp = f.name
-            import ssl
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-            with urllib.request.urlopen(install_url, context=ctx) as u, open(tmp, "wb") as out:
+            safe = safe_ip(ip)
+            if not safe:
+                return jsonify({'output': '', 'error': 'invalid ip'}), 400
+            # TLS verification stays ON. Disabling it let anyone on the path
+            # swap the APK being installed on the user's TV.
+            with urllib.request.urlopen(install_url, timeout=120) as u, open(tmp, "wb") as out:
                 out.write(u.read())
-            result = subprocess.run(f'{get_adb()} -s {ip}:5555 install -r "{tmp}"', shell=True, capture_output=True, text=True, timeout=300)
+            result = subprocess.run(
+                [get_adb(), '-s', f'{safe}:5555', 'install', '-r', tmp],
+                capture_output=True, text=True, timeout=300
+            )
             os.unlink(tmp)
             return jsonify({'output': result.stdout + result.stderr, 'error': ''})
         except Exception as e:
             return jsonify({'output': '', 'error': str(e)})
     if command:
-        adb_path = get_adb()
-        if command.startswith('adb '):
-            command = adb_path + command[3:]
+        ok, args, err = validate_adb_command(command)
+        if not ok:
+            return jsonify({'output': '', 'error': err}), 400
         try:
-            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
+            result = subprocess.run([get_adb()] + args, capture_output=True, text=True, timeout=30)
             return jsonify({'output': result.stdout, 'error': result.stderr})
         except Exception as e:
             return jsonify({'output': '', 'error': str(e)})
@@ -82,7 +158,10 @@ def adb_route():
 def connect():
     data = request.json
     ip = data.get('ip', '')
-    subprocess.run(f'{get_adb()} connect {ip}:5555', shell=True, capture_output=True)
+    ip = safe_ip(ip)
+    if not ip:
+        return jsonify({'output': '', 'error': 'invalid ip'}), 400
+    subprocess.run([get_adb(), 'connect', f'{ip}:5555'], capture_output=True)
     output = adb(ip, 'shell getprop ro.product.model')
     return jsonify({'output': output.strip(), 'error': ''})
 
@@ -90,8 +169,8 @@ def _do_adb_pair_win(adb_path, pair_address, code, timeout=15):
     """Attempt adb pair and return (success, output_string)."""
     try:
         result = subprocess.run(
-            f'"{adb_path}" pair {pair_address} {code}',
-            shell=True, capture_output=True, text=True, timeout=timeout
+            [adb_path, 'pair', pair_address, code],
+            capture_output=True, text=True, timeout=timeout
         )
         out = result.stdout + result.stderr
         if 'successfully paired' in out.lower():
@@ -113,6 +192,13 @@ def pair_route():
     if not pair_address or not code:
         return jsonify({'success': False, 'error': 'pair_address and code required'})
 
+    pair_address = safe_pair_address(pair_address)
+    code = safe_pair_code(code)
+    if not pair_address:
+        return jsonify({'success': False, 'error': 'pair_address must look like 192.168.1.45:37829'}), 400
+    if not code:
+        return jsonify({'success': False, 'error': 'code must be the 6 digits shown on the TV'}), 400
+
     ip = pair_address.split(':')[0]
 
     # Step 1: try pairing normally
@@ -121,11 +207,11 @@ def pair_route():
     # Step 2: if protocol fault, reset ADB server and retry once
     if not success and ('protocol fault' in pair_out.lower() or 'error' in pair_out.lower() or 'failed' in pair_out.lower()):
         try:
-            subprocess.run(f'"{adb_path}" kill-server', shell=True, capture_output=True, timeout=5)
+            subprocess.run([adb_path, 'kill-server'], capture_output=True, timeout=5)
             _time.sleep(0.5)
             subprocess.Popen(
-                f'"{adb_path}" nodaemon server',
-                shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                [adb_path, 'nodaemon', 'server'],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
             _time.sleep(1.5)
             success, pair_out = _do_adb_pair_win(adb_path, pair_address, code)
@@ -142,15 +228,15 @@ def pair_route():
     _time.sleep(1)
     try:
         conn_result = subprocess.run(
-            f'"{adb_path}" connect {ip}:5555',
-            shell=True, capture_output=True, text=True, timeout=10
+            [adb_path, 'connect', f'{ip}:5555'],
+            capture_output=True, text=True, timeout=10
         )
         conn_out = conn_result.stdout + conn_result.stderr
         connected = 'connected to' in conn_out.lower()
         if connected:
             model_result = subprocess.run(
-                f'"{adb_path}" -s {ip}:5555 shell getprop ro.product.model',
-                shell=True, capture_output=True, text=True, timeout=5
+                [adb_path, '-s', f'{ip}:5555', 'shell', 'getprop', 'ro.product.model'],
+                capture_output=True, text=True, timeout=5
             )
             model = model_result.stdout.strip() or 'Unknown device'
             return jsonify({'success': True, 'ip': ip, 'model': model})
@@ -195,18 +281,22 @@ def make_icon():
 def open_ui(icon, item):
     webbrowser.open('http://localhost:5001')
 
-CURRENT_VERSION = '1.0.0'
+CURRENT_VERSION = '1.1.0'
 
 def do_update(download_url, icon):
     try:
-        import tempfile, zipfile, urllib.request, ssl, shutil
+        import tempfile, zipfile, shutil
         import tkinter.messagebox as mb
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
+        # TLS verification MUST stay on: this downloads an executable that is
+        # then run with the user's privileges. `requests` ships its own CA
+        # bundle, which also avoids the missing-root-certs problem that makes
+        # urllib fail inside a PyInstaller bundle.
         tmp_zip = os.path.join(tempfile.gettempdir(), 'HelmUpdate.zip')
-        with urllib.request.urlopen(download_url, context=ctx) as u, open(tmp_zip, 'wb') as f:
-            f.write(u.read())
+        with requests.get(download_url, stream=True, timeout=120) as r:
+            r.raise_for_status()
+            with open(tmp_zip, 'wb') as f:
+                for chunk in r.iter_content(65536):
+                    f.write(chunk)
         extract_dir = os.path.join(tempfile.gettempdir(), 'HelmUpdate')
         if os.path.exists(extract_dir):
             shutil.rmtree(extract_dir)
