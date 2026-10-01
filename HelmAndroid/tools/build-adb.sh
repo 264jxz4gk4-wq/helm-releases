@@ -100,7 +100,8 @@ apply_patches() {
   [ -f "$f" ] || { echo "missing"; return 1; }
   sed -i 's/std::packaged_task<void() noexcept>/std::packaged_task<void()>/g' "$f" || return 1
   grep -n "packaged_task" "$f"
-  if grep -c "noexcept>" "$f" >/dev/null; then echo "noexcept Task still present"; return 1; fi
+  # (A comment in the file quotes the old error text, so match the declaration.)
+  if grep -c "Task = std::packaged_task<void() noexcept>" "$f" >/dev/null; then echo "noexcept Task still present"; return 1; fi
 }
 host_protoc() {
   cd "$WORK/sdk-tools" &&
