@@ -42,8 +42,13 @@ phase() {
     return 0
   fi
   tail -n 80 "$log"; echo "::endgroup::"
-  local tailtext; tailtext="$(grep -v '^\s*$' "$log" | tail -n 25 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
-  echo "::error title=$name failed::$tailtext"
+  # The first error lines say why; the tail says where it stopped. Both go in
+  # the annotation, which is readable on the run page without log access.
+  local errs tailtext
+  errs="$(grep -E -m 12 'error:|Error:|FAILED:|fatal|No such file|not found' "$log" | cut -c1-300)"
+  tailtext="$(grep -v '^\s*$' "$log" | tail -n 12 | cut -c1-300)"
+  printf '%s\n--- last lines ---\n%s\n' "$errs" "$tailtext" | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}' > "$LOGS/annotation.txt"
+  echo "::error title=$name failed::$(cat "$LOGS/annotation.txt")"
   echo "- ❌ $name failed" >> "$SUMMARY"
   exit 1
 }
@@ -69,6 +74,24 @@ get_sources() {
   git clone -c advice.detachedHead=false --depth 1 --branch "$LZY_TAG" \
     https://github.com/lzhiyong/android-sdk-tools.git "$WORK/sdk-tools" &&
   cd "$WORK/sdk-tools" && python3 get_source.py --tags "$AOSP_TAG"
+}
+# The recipe ships patches that get_source.py doesn't apply ("we may need to
+# patch manually"). adb needs two: protobuf's CMake include paths (without it
+# the host protoc fails on a missing config.h) and openscreen's task runner
+# (adb's mDNS code). The rest are for aapt2/dexdump.
+apply_patches() {
+  cd "$WORK/sdk-tools" || return 1
+  local p
+  for p in protobuf_CMakeLists.txt.patch task_runner.h.patch; do
+    echo "== $p"
+    if patch -p1 --forward --batch --dry-run < "patches/$p" >/dev/null 2>&1; then
+      patch -p1 --forward --batch < "patches/$p" || return 1
+    elif patch -p1 --reverse --batch --dry-run < "patches/$p" >/dev/null 2>&1; then
+      echo "already applied"
+    else
+      echo "does not apply:"; patch -p1 --forward --batch --dry-run < "patches/$p"; return 1
+    fi
+  done
 }
 host_protoc() {
   cd "$WORK/sdk-tools" &&
@@ -161,6 +184,7 @@ describe() {
 phase "Install NDK $NDK_VERSION" install_ndk
 phase "Host tools" host_tools
 phase "Fetch AOSP sources" get_sources
+phase "Apply recipe patches" apply_patches
 phase "Build host protoc" host_protoc
 phase "Configure" configure
 phase "Build adb" build_adb
