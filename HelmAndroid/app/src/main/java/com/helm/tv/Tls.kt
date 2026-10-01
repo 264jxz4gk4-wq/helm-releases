@@ -74,21 +74,53 @@ object Tls {
 
     private fun trustStore(context: Context): KeyStore {
         val store = KeyStore.getInstance(KeyStore.getDefaultType()).apply { load(null, null) }
-        var n = 0
+        var system = 0
         try {
-            val system = KeyStore.getInstance("AndroidCAStore").apply { load(null, null) }
-            for (alias in system.aliases()) {
-                system.getCertificate(alias)?.let { store.setCertificateEntry("sys-${n++}", it) }
+            val ks = KeyStore.getInstance("AndroidCAStore").apply { load(null, null) }
+            for (alias in ks.aliases()) {
+                ks.getCertificate(alias)?.let { store.setCertificateEntry("sys-${system++}", it) }
             }
         } catch (e: Exception) {
             Log.w(TAG, "could not read system roots", e)
         }
-        val factory = CertificateFactory.getInstance("X.509")
-        context.resources.openRawResource(R.raw.cacerts).use { input ->
-            for (cert in factory.generateCertificates(input)) store.setCertificateEntry("moz-${n++}", cert)
+
+        val (bundled, unreadable) = bundledRoots(context)
+        bundled.forEachIndexed { i, cert -> store.setCertificateEntry("moz-$i", cert) }
+        Log.i(TAG, "trust store: $system system + ${bundled.size} bundled roots" +
+            if (unreadable > 0) " ($unreadable bundled certificates unreadable)" else "")
+
+        // GitHub, where most store apps are hosted, chains to this root. If
+        // it's missing, say so loudly rather than failing every download.
+        if (bundled.none { it.subjectX500Principal.name.contains("USERTrust ECC Certification Authority") }) {
+            Log.w(TAG, "USERTrust ECC root missing from bundle - GitHub downloads will fail")
         }
-        Log.i(TAG, "trust store: $n roots")
         return store
+    }
+
+    private val pemBlock = Regex("-----BEGIN CERTIFICATE-----([^-]+)-----END CERTIFICATE-----")
+
+    /**
+     * Parse res/raw/cacerts.pem one certificate at a time.
+     *
+     * Don't hand the whole file to CertificateFactory.generateCertificates():
+     * the file is Mozilla's list as certifi ships it, with comment lines
+     * between certificates, and KitKat's parser silently stops after the first
+     * few - on the Tab 3 only ~6 of 121 loaded, so GitHub's root never did.
+     */
+    private fun bundledRoots(context: Context): Pair<List<X509Certificate>, Int> {
+        val text = context.resources.openRawResource(R.raw.cacerts).use { String(it.readBytes(), Charsets.US_ASCII) }
+        val factory = CertificateFactory.getInstance("X.509")
+        val certs = ArrayList<X509Certificate>()
+        var unreadable = 0
+        for (m in pemBlock.findAll(text)) {
+            try {
+                val der = android.util.Base64.decode(m.groupValues[1].replace(Regex("\\s"), ""), android.util.Base64.DEFAULT)
+                certs.add(factory.generateCertificate(ByteArrayInputStream(der)) as X509Certificate)
+            } catch (e: Exception) {
+                unreadable++
+            }
+        }
+        return certs to unreadable
     }
 
     /**
