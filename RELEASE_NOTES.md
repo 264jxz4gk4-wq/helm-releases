@@ -1,6 +1,10 @@
 ## Helm — Universal TV Manager
 
-### What's New in 1.2.4
+### What's New in 1.2.5
+- **VLC installs on 32-bit TVs** (like the onn. 4K and many TCL models). Helm only offered the 64-bit build, which those TVs reject.
+- **Store updated to the latest versions:** VLC 3.7.1, SmartTube 32.56, Jellyfin 0.19.10, NewPipe 0.29.1, Projectivy 4.71, RetroArch 1.22.2.
+
+### 1.2.4
 - **Helm for Android:** fixes app downloads on Android 4.4. Older Android loaded only a handful of Helm's up-to-date security certificates, so downloads from GitHub, where most store apps live, were rejected.
 
 ### 1.2.3

@@ -281,7 +281,7 @@ def make_icon():
 def open_ui(icon, item):
     webbrowser.open('http://localhost:5001')
 
-CURRENT_VERSION = '1.2.4'
+CURRENT_VERSION = '1.2.5'
 
 def do_update(download_url, icon):
     try:
