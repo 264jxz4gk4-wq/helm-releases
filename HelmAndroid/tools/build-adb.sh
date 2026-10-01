@@ -113,8 +113,16 @@ configure() {
   protoc="$(find "$WORK/sdk-tools/build-protoc" -maxdepth 1 -type f -name 'protoc*' -perm -u+x | head -1)"
   [ -n "$protoc" ] || { echo "host protoc not found"; return 1; }
   echo "host protoc: $protoc"
+  # A static adb needs static zlib. Left to itself, protobuf's CMake finds the
+  # NDK's libz.so (find_package(ZLIB)) and passes it by full path, which the
+  # final static link rejects ("attempted static link of dynamic object").
+  # The NDK also ships libz.a, one directory up from the per-API libraries.
+  local zlib="$NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libz.a"
+  [ -f "$zlib" ] || { echo "static zlib not found at $zlib"; ls "$(dirname "$zlib")"; return 1; }
+  echo "static zlib: $zlib"
   cd "$WORK/sdk-tools" &&
   cmake -GNinja -B build-arm64 \
+    -DZLIB_LIBRARY="$zlib" -Dprotobuf_WITH_ZLIB=OFF \
     -DANDROID_NDK="$NDK" \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
     -DANDROID_PLATFORM="android-$API" \
@@ -124,7 +132,28 @@ configure() {
     -DCMAKE_BUILD_TYPE=Release \
     -DPROTOC_PATH="$protoc" \
     -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
-    -DCMAKE_EXE_LINKER_FLAGS="-static -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384"
+    -DCMAKE_EXE_LINKER_FLAGS="-static -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384" ||
+    return 1
+  # Fail now, not after a half-hour compile, if adb's link line still names a
+  # shared library.
+  python3 - build-arm64/build.ninja <<'EOF'
+import re, sys
+lines = open(sys.argv[1]).read().split("\n")
+start = next((i for i, l in enumerate(lines) if re.match(r"build \S*bin/adb:", l)), None)
+if start is None:
+    sys.exit("adb link step not found in build.ninja")
+block = []
+for l in lines[start:]:
+    if not l.strip():
+        break
+    block.append(l)
+libs = " ".join(l for l in block if "LINK_LIBRARIES" in l or l.startswith("build "))
+shared = sorted(set(re.findall(r"\S+\.so(?:\.\d+)*\b", libs)))
+print("adb links:", " ".join(t for t in libs.split() if t.endswith((".a", ".so")) or t.startswith("-l"))[:1500])
+if shared:
+    sys.exit("adb would link shared libraries: " + " ".join(shared))
+print("adb link line: static libraries only")
+EOF
 }
 build_adb() {
   cd "$WORK/sdk-tools" && ninja -C build-arm64 adb
