@@ -1,0 +1,28 @@
+name: Build adb for Android
+
+# Builds a static arm64 adb that works on 16 KB-page phones, verifies it,
+# and publishes it as a pre-release. Logic: HelmAndroid/tools/build-adb.sh
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and verify adb
+        run: bash HelmAndroid/tools/build-adb.sh "$RUNNER_TEMP/adb"
+
+      - name: Publish pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="adb-35.0.2-16k-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" --prerelease --target "$GITHUB_SHA" \
+            --title "adb for Helm ($TAG)" --notes-file "$RUNNER_TEMP/adb/out/NOTES.md" \
+            "$RUNNER_TEMP"/adb/out/adb-*
