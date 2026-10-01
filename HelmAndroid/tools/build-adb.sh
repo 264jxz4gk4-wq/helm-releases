@@ -53,8 +53,14 @@ SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
 NDK="$SDK/ndk/$NDK_VERSION"
 
 install_ndk() {
-  [ -d "$NDK" ] && { echo "NDK $NDK_VERSION already installed"; return 0; }
-  yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
+  if [ ! -f "$NDK/source.properties" ]; then
+    # Not `yes | sdkmanager` under pipefail: `yes` dies of SIGPIPE when
+    # sdkmanager exits, which fails the pipeline even when the install worked.
+    # sdkmanager redraws its progress bar with \r; turn those into lines.
+    printf 'y\ny\ny\ny\ny\n' | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" 2>&1 | tr '\r' '\n' | grep -v '^\s*$' | tail -n 40
+  fi
+  [ -f "$NDK/source.properties" ] || { echo "NDK $NDK_VERSION not installed; have: $(ls "$SDK/ndk" 2>&1)"; return 1; }
+  grep Pkg.Revision "$NDK/source.properties"
 }
 host_tools() {
   sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build cmake qemu-user-static
@@ -102,9 +108,11 @@ collect() {
 # Refuse to publish anything that isn't exactly what we need.
 verify() {
   local f="$OUT/adb-$ABI"
+  # grep -c, not grep -q: under pipefail, -q exiting at the first match can
+  # kill the writer with SIGPIPE and turn a match into a failure.
   file "$f"
-  file "$f" | grep -q "ARM aarch64" || { echo "not an aarch64 binary"; return 1; }
-  if readelf -d "$f" 2>/dev/null | grep -q NEEDED; then echo "dynamically linked; must be static"; return 1; fi
+  file "$f" | grep -c "ARM aarch64" >/dev/null || { echo "not an aarch64 binary"; return 1; }
+  if readelf -d "$f" 2>/dev/null | grep -c NEEDED >/dev/null; then echo "dynamically linked; must be static"; return 1; fi
   python3 - "$f" <<'EOF' || return 1
 import subprocess, sys
 PAGE = 0x4000
@@ -129,7 +137,7 @@ EOF
   echo "--- runs (under qemu) ---"
   qemu-aarch64-static "$f" version | tee "$LOGS/version.txt"
   grep -q "Android Debug Bridge version" "$LOGS/version.txt" || { echo "binary did not run"; return 1; }
-  strings "$f" | grep -q "SPAKE2" || { echo "pairing (SPAKE2) support missing"; return 1; }
+  strings "$f" | grep -c "SPAKE2" >/dev/null || { echo "pairing (SPAKE2) support missing"; return 1; }
   echo "pairing support: present"
 }
 
