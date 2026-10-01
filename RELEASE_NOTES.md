@@ -1,6 +1,9 @@
 ## Helm — Universal TV Manager
 
-### What's New in 1.2.3
+### What's New in 1.2.4
+- **Helm for Android:** fixes app downloads on Android 4.4. Older Android loaded only a handful of Helm's up-to-date security certificates, so downloads from GitHub, where most store apps live, were rejected.
+
+### 1.2.3
 - **Installs report what really happened.** Helm used to show "Installed!" whenever the error didn't contain one particular word, so a failed download looked like success. It now requires the TV to confirm the install, and says why when it doesn't (couldn't download, not enough space, wrong processor type, and so on).
 - **Helm for Android:** fixes app downloads failing on Android 4.4 with a certificate error.
 - Clearer advice when a TV hasn't approved your device yet.

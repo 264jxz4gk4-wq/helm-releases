@@ -21,7 +21,7 @@ def resource_path(relative_path):
     return os.path.join(BASE_DIR, relative_path)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UI_DIR = os.path.join(BASE_DIR, 'ui')
-CURRENT_VERSION = "1.2.3"
+CURRENT_VERSION = "1.2.4"
 VERSION_URL = "https://raw.githubusercontent.com/264jxz4gk4-wq/helm-releases/main/version.json"
 PORT = 5001
 
