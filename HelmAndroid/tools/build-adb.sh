@@ -81,17 +81,26 @@ get_sources() {
 # (adb's mDNS code). The rest are for aapt2/dexdump.
 apply_patches() {
   cd "$WORK/sdk-tools" || return 1
-  local p
-  for p in protobuf_CMakeLists.txt.patch task_runner.h.patch; do
-    echo "== $p"
-    if patch -p1 --forward --batch --dry-run < "patches/$p" >/dev/null 2>&1; then
-      patch -p1 --forward --batch < "patches/$p" || return 1
-    elif patch -p1 --reverse --batch --dry-run < "patches/$p" >/dev/null 2>&1; then
-      echo "already applied"
-    else
-      echo "does not apply:"; patch -p1 --forward --batch --dry-run < "patches/$p"; return 1
-    fi
-  done
+  local p=protobuf_CMakeLists.txt.patch
+  echo "== $p"
+  if patch -p1 --forward --batch --dry-run < "patches/$p" >/dev/null 2>&1; then
+    patch -p1 --forward --batch < "patches/$p" || return 1
+  elif patch -p1 --reverse --batch --dry-run < "patches/$p" >/dev/null 2>&1; then
+    echo "already applied"
+  else
+    echo "does not apply:"; patch -p1 --forward --batch --dry-run < "patches/$p"; return 1
+  fi
+
+  # task_runner.h.patch was made for an older openscreen and no longer
+  # applies as a diff. What it does: make Task a plain
+  # std::packaged_task<void()>, since the noexcept variant doesn't compile with
+  # the NDK's libc++ under -fno-exceptions. Do that by content instead.
+  local f=src/openscreen/platform/api/task_runner.h
+  echo "== $f"
+  [ -f "$f" ] || { echo "missing"; return 1; }
+  sed -i 's/std::packaged_task<void() noexcept>/std::packaged_task<void()>/g' "$f" || return 1
+  grep -n "packaged_task" "$f"
+  if grep -c "noexcept>" "$f" >/dev/null; then echo "noexcept Task still present"; return 1; fi
 }
 host_protoc() {
   cd "$WORK/sdk-tools" &&
