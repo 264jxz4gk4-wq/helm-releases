@@ -37,6 +37,20 @@ Android** - a change to `ui/index.html` ships to all three on the next push.
 `libadb.so` is a real adb binary (see `ADB_BINARY.md`), so Android 11+
 wireless-debugging pairing works exactly as it does on the desktop.
 
+### IR blaster
+
+On a device with an infrared transmitter (the Galaxy Tab 3, many Xiaomi
+phones), the Remote page can also work the TV over IR, including turning it
+on, which adb can't do once the TV is off. The UI asks `GET /ir` whether the
+device has one (only when it's running in an Android WebView), walks the
+person through picking their TV's code set by trying power codes, then sends
+each button as `POST /ir {frequency, pattern}`. `IrBlaster.kt` checks the
+request and passes it to `ConsumerIrManager.transmit()`.
+
+The codes and protocol encoders live in `tools/ir/` (`ir.js`, carried inline
+in the UI), with a test that checks every key against independent references.
+See `tools/ir/README.md`.
+
 ### What the build does to the shared UI
 
 `tools/sync-ui.mjs` copies `../ui/index.html` into the APK as two builds, and
@@ -55,7 +69,8 @@ wireless-debugging pairing works exactly as it does on the desktop.
   Verified to parse as ES5.
 
 Both builds also check that every function the HTML calls still exists and
-that no inline `onclick` uses syntax the target can't run. Any failure stops
+that no inline `onclick` uses syntax the target can't run, and that the UI's
+inline copy of the IR library matches `tools/ir/ir.js`. Any failure stops
 the build. In testing, the legacy build rendered pixel-identical to the
 desktop UI with `fetch`, `Promise`, `Symbol`, `Object.assign` and
 `NodeList.forEach` deleted from the page first.
@@ -80,7 +95,14 @@ Same rules as the patched desktop servers, plus loopback-only:
 * no CORS headers - the only client is the app's own WebView
 * `Host` must be `localhost` or an IP literal, which blocks DNS rebinding
   from a web page open in the tablet's browser
-* `/adb` only ever runs the bundled adb, and only allowlisted subcommands
+* POSTs must be JSON (`Content-Type: application/json`) and, when the browser
+  sends an `Origin`, come from `http://localhost:5001`, which blocks cross-site
+  form posts from a web page
+* `/adb` only ever runs the bundled adb, and only the subcommands the UI uses
+  (`connect`, `disconnect`, `devices`, `get-state`, `shell`, `uninstall`,
+  `reboot`, `version`): nothing that reads or writes this device's files
+* `/ir` only accepts a carrier between 15 and 100 kHz and a pattern of at most
+  1024 durations totalling 2 seconds or less
 
 ## Building
 
@@ -129,12 +151,14 @@ testing, but that APK can't update a release install (uninstall first).
 Everything logs to logcat. With the tablet plugged into a computer:
 
 ```bash
-adb -s <tablet-serial> logcat -s HelmService HelmServer HelmAdb HelmWeb
+adb -s <tablet-serial> logcat -s HelmService HelmServer HelmAdb HelmWeb HelmIr
 ```
 
 * `HelmService: bundled adb: exit=0 Android Debug Bridge version ...` -
   the bundled binary runs on this device. If the exit code isn't 0, see
   `ADB_BINARY.md`.
+* `HelmService: IR blaster: {"available":true,...}` - whether the device has
+  an IR transmitter, and which carrier frequencies it accepts.
 * `HelmWeb:` lines are the page's JavaScript console, including any errors.
 
 ## Known limits
@@ -144,5 +168,8 @@ adb -s <tablet-serial> logcat -s HelmService HelmServer HelmAdb HelmWeb
   step (shown on the main Wireless debugging screen). The Android server
   already accepts an optional `connect_address` for this; the shared UI
   doesn't send it yet.
-* On Android 4.4-6, CSS flex `gap` isn't supported, so some items sit closer
-  together. Cosmetic only.
+* IR codes come from published remote captures and have been checked against
+  protocol references, but only codes someone has tried on their own TV are
+  known to work on that model. If no code works on an Android 4.4 device,
+  "Try alternate timing" in the IR setup covers IR drivers that count carrier
+  cycles instead of microseconds.

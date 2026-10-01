@@ -1,6 +1,16 @@
 ## Helm — Universal TV Manager
 
-### What's New in 1.2.5
+### What's New in 1.3.0
+- **A new look.** Helm has been redesigned from the ground up: cleaner screens, new icons, and a layout that fits phones (tabs along the bottom), tablets and computers.
+- **Remote.** Control your TV from Helm: arrows, OK, back, home, volume, channels, play/pause and power. **Type on your TV** from your keyboard or phone, for searches and Wi‑Fi passwords. On a computer, the arrow keys, Enter and Esc work too.
+- **IR blaster support (Helm for Android).** On phones and tablets with an IR blaster, like the Galaxy Tab 3, the remote also works over infrared, so it can turn the TV on, which Wi‑Fi can't. Pick your TV's brand and Helm tries its codes until the TV responds.
+- **Six new apps in the Store:** Moonlight (play PC games on the TV), Aerial Views (Apple TV-style screensaver, with one tap to make it your screensaver), TV Bro (a web browser for the remote), LocalSend (send files from your phone), Just Player and Lemuroid (retro games).
+- **Removed Wolf Launcher:** its download didn't come from the launcher's developer. Projectivy is still there.
+- **Helm for Android runs on the newest phones.** Some phones on Android 15 and later use a different memory layout (16 KB pages) that Helm's built-in adb couldn't run on. Helm now ships its own build that works on them.
+- **Security fixes.** On Mac and Windows, other devices on your Wi‑Fi could use Helm's local server to read or write files on your computer. Helm now only accepts the commands it actually uses, and only downloads apps over HTTPS. On Android, a web page open on the same phone or tablet could send Helm commands; Helm now only takes requests from its own screen. Updating is recommended.
+- **Windows:** "Find my TV" now works, and black command windows no longer flash up while Helm talks to the TV.
+
+### 1.2.5
 - **VLC installs on 32-bit TVs** (like the onn. 4K and many TCL models). Helm only offered the 64-bit build, which those TVs reject.
 - **Store updated to the latest versions:** VLC 3.7.1, SmartTube 32.56, Jellyfin 0.19.10, NewPipe 0.29.1, Projectivy 4.71, RetroArch 1.22.2.
 

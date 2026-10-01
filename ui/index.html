@@ -3,177 +3,1059 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0A0B0F">
+<meta name="color-scheme" content="dark">
 <title>Helm</title><meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
 <style>
+  /* Helm UI. Runs in current browsers (Mac, Windows), Android 7+ WebViews
+     (Chrome 51+) and, via HelmAndroid/tools/legacy.mjs, Android 4.4
+     (Chrome 30). So: no flex `gap`, no grid, no `inset`, no clamp()/min();
+     theme colours only as :root variables. */
+  :root {
+    --primary: #5B8CFF;
+    --primary-bg: rgba(91,140,255,0.12);
+    --primary-dim: rgba(91,140,255,0.36);
+    --bg: #0A0B0F;
+    --panel: #0E1015;
+    --card: #14161C;
+    --card-2: #1A1D25;
+    --card-3: #232731;
+    --line: rgba(255,255,255,0.06);
+    --line-2: rgba(255,255,255,0.11);
+    --text: #EDEFF3;
+    --text-2: #9AA1AE;
+    --text-3: #636A78;
+    --ok: #3DD68C;
+    --ok-bg: rgba(61,214,140,0.12);
+    --bad: #FF6B6B;
+    --bad-bg: rgba(255,107,107,0.12);
+    --warn: #F5B841;
+    --warn-bg: rgba(245,184,65,0.1);
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #080808; color: #fff; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 200px; background: #0f0f0f; border-right: 1px solid #1a1a1a; padding: 24px 12px; display: flex; flex-direction: column; gap: 4px; }
-  .logo { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; color: var(--primary); margin-bottom: 24px; padding-left: 12px; letter-spacing: -0.5px; transition: color 0.3s; }
-  .logo img { width: 32px; height: 32px; border-radius: 8px; }
-  .nav-btn { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: none; background: none; color: #555; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; text-align: left; transition: all 0.15s; }
-  .nav-btn:hover { background: #1a1a1a; color: #fff; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; min-height: 100vh; }
+  body.modal-open { overflow: hidden; }
+  button, input { font-family: inherit; font-size: inherit; color: inherit; }
+  button { cursor: pointer; background: none; border: 0; outline: none; }
+  a { color: var(--primary); text-decoration: none; }
+  b, strong { font-weight: 600; color: var(--text); }
+  .i { width: 18px; height: 18px; display: inline-block; vertical-align: middle; flex-shrink: 0; }
+
+  /* ---- navigation: sidebar on wide screens, tab bar on phones ---- */
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 232px; background: var(--panel); border-right: 1px solid var(--line); padding: 20px 14px 16px; display: flex; flex-direction: column; z-index: 50; }
+  .logo { display: flex; align-items: center; padding: 2px 8px 24px; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
+  .logo-mark { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(150deg, #1C2436, #0B0F18); border: 1px solid var(--line-2); color: var(--primary); margin-right: 11px; box-shadow: 0 6px 16px rgba(0,0,0,0.35); text-align: center; transition: color 0.3s; }
+  .logo-mark svg { width: 28px; height: 28px; margin-top: 2px; }
+  .nav-btn { display: block; width: 100%; height: 40px; line-height: 40px; padding: 0 10px; margin-bottom: 2px; border-radius: 9px; color: var(--text-2); font-size: 14px; font-weight: 500; text-align: left; white-space: nowrap; transition: background 0.15s, color 0.15s; }
+  .nav-btn .i { margin: -2px 12px 0 0; }
   .nav-btn.active { background: var(--primary-bg); color: var(--primary); }
-  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
-  .main { margin-left: 200px; padding: 40px; min-height: 100vh; padding-bottom: 60px; }
-  .page { display: none; }
-  .page.active { display: block; }
-  h1 { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
-  .subtitle { color: #555; font-size: 13px; margin-bottom: 32px; }
-  .card { background: #111; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
-  .input { background: #1a1a1a; border: none; border-radius: 10px; padding: 14px 16px; color: #fff; font-size: 15px; width: 100%; outline: none; margin-bottom: 12px; }
-  .input::placeholder { color: #444; }
-  .btn { background: var(--primary); border: none; border-radius: 10px; padding: 14px 24px; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%; transition: opacity 0.15s; }
-  .btn:hover { opacity: 0.85; }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-sm { padding: 9px 16px; font-size: 13px; width: auto; border-radius: 8px; }
-  .btn-outline { background: none; border: 1px solid #333; color: #888; }
-  .btn-outline:hover { border-color: #555; color: #fff; background: #1a1a1a; }
-  .btn-danger { background: #c0392b22; border: 1px solid #c0392b55; color: #c0392b; }
-  .btn-danger:hover { background: #c0392b44; }
-  .btn-installed { background: #27ae6022; border: 1px solid #27ae6055; color: #27ae60; cursor: default; }
-  .connected-card { background: #111; border: 1px solid var(--primary-dim); border-radius: 16px; padding: 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 16px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); flex-shrink: 0; }
-  .device-info { flex: 1; }
-  .device-name { font-size: 18px; font-weight: 700; }
-  .device-ip { color: #555; font-size: 13px; margin-top: 2px; }
-  .app-row { display: flex; align-items: center; background: #111; border-radius: 12px; padding: 14px; margin-bottom: 8px; gap: 14px; }
-  .app-icon { font-size: 28px; flex-shrink: 0; }
-  .app-info { flex: 1; }
-  .app-name { font-size: 15px; font-weight: 600; }
-  .app-desc { color: #555; font-size: 12px; margin-top: 3px; }
-  .app-actions { display: flex; gap: 8px; align-items: center; flex-direction: column; min-width: 110px; }
-  .progress-wrap { width: 100%; background: #1a1a1a; border-radius: 6px; height: 6px; overflow: hidden; display: none; }
-  .progress-bar { height: 100%; background: var(--primary); border-radius: 6px; width: 0%; transition: width 0.3s; }
-  .progress-label { font-size: 10px; color: #555; text-align: center; }
-  .category-title { color: #444; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; margin-top: 24px; }
-  .tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: var(--primary-bg); color: var(--primary); margin-top: 4px; }
-  .bloat-row { display: flex; align-items: center; justify-content: space-between; background: #111; border-radius: 12px; padding: 14px 18px; margin-bottom: 8px; }
-  .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .slider { position: absolute; inset: 0; background: #333; border-radius: 24px; cursor: pointer; transition: 0.2s; }
-  .slider:before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+  .side-foot { margin-top: auto; }
+  .conn-pill { display: flex; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); font-size: 12px; color: var(--text-2); min-width: 0; }
+  .conn-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); margin-right: 10px; flex-shrink: 0; transition: background 0.2s; }
+  .conn-on .status-dot { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg); }
+  .conn-busy .status-dot { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-bg); }
+  .topbar { display: none; }
+
+  .main { margin-left: 232px; min-height: 100vh; padding: 36px 40px 64px; }
+  .page { display: none; max-width: 920px; margin: 0 auto; }
+  .page.active { display: block; -webkit-animation: page-in 0.22s ease; animation: page-in 0.22s ease; }
+  @-webkit-keyframes page-in { from { opacity: 0; -webkit-transform: translateY(6px); } to { opacity: 1; -webkit-transform: none; } }
+  @keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* ---- type ---- */
+  .page-head { margin-bottom: 24px; }
+  .head-row { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; }
+  .head-row > div:first-child { margin-right: 16px; }
+  h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.2; }
+  .subtitle { color: var(--text-2); font-size: 14px; margin-top: 5px; }
+  .section-label, .category-title { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); margin: 28px 0 10px; }
+  .card-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .card-sub { color: var(--text-2); font-size: 13px; margin-top: 4px; line-height: 1.5; }
+  .card-title-row { display: flex; align-items: center; font-size: 15px; font-weight: 600; }
+  .card-title-row .i { color: var(--text-2); margin-right: 10px; }
+  .muted { color: var(--text-3); }
+  .hint { color: var(--text-3); font-size: 12px; margin-top: 12px; line-height: 1.5; }
+
+  /* ---- surfaces & controls ---- */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-bottom: 14px; }
+  .btn { display: inline-block; height: 42px; line-height: 40px; padding: 0 18px; border-radius: 10px; border: 1px solid transparent; background: var(--primary); color: #fff; font-size: 14px; font-weight: 600; text-align: center; white-space: nowrap; vertical-align: middle; transition: background 0.15s, opacity 0.15s, box-shadow 0.15s, -webkit-filter 0.15s, filter 0.15s; }
+  .btn .i { width: 17px; height: 17px; margin: -2px 7px 0 -2px; }
+  .btn:active { -webkit-filter: brightness(0.92); filter: brightness(0.92); }
+  .btn:disabled { opacity: 0.45; cursor: default; -webkit-filter: none; filter: none; }
+  .btn-block { display: block; width: 100%; }
+  .btn-sm { height: 34px; line-height: 32px; padding: 0 13px; font-size: 13px; border-radius: 9px; }
+  .btn-sm .i { width: 15px; height: 15px; }
+  .btn-outline { background: var(--card-2); border-color: var(--line-2); color: var(--text); }
+  .btn-ghost { background: transparent; color: var(--text-2); }
+  .btn-danger { background: var(--bad-bg); color: var(--bad); }
+  .btn-installed { background: var(--ok-bg); color: var(--ok); }
+  .btn-installed:disabled { opacity: 1; }
+  .btn-row { display: flex; flex-wrap: wrap; margin: 0 -4px; }
+  .btn-row > .btn { margin: 4px; }
+  .input { display: block; width: 100%; height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text); font-size: 15px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+  .input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-bg); }
+  .input::placeholder { color: var(--text-3); }
+  .input::-webkit-input-placeholder { color: var(--text-3); }
+  .field-row { display: flex; align-items: center; }
+  .field-row .input { flex: 1; min-width: 0; margin-right: 10px; }
+  .field-row .btn { flex-shrink: 0; }
+  label.field { display: block; color: var(--text-2); font-size: 12px; font-weight: 500; margin: 14px 0 6px; }
+  .divider { display: flex; align-items: center; color: var(--text-3); font-size: 12px; margin: 20px 0 14px; }
+  .divider:before, .divider:after { content: ''; flex: 1; height: 1px; background: var(--line-2); }
+  .divider span { padding: 0 12px; }
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; line-height: 18px; background: var(--card-3); color: var(--text-2); vertical-align: middle; margin-left: 8px; white-space: nowrap; }
+  .chip-ok { background: var(--ok-bg); color: var(--ok); }
+  .chip-accent { background: var(--primary-bg); color: var(--primary); }
+  .notice { display: flex; align-items: center; padding: 12px 14px; border-radius: 12px; background: var(--warn-bg); color: var(--warn); font-size: 13px; margin-bottom: 16px; }
+  .notice .i { margin-right: 10px; }
+  .notice .grow { flex: 1; }
+  .notice .btn { margin-left: 12px; }
+  .empty { color: var(--text-3); font-size: 14px; text-align: center; padding: 56px 16px; border: 1px dashed var(--line-2); border-radius: 16px; }
+  .empty .i { display: block; width: 28px; height: 28px; margin: 0 auto 10px; color: var(--text-3); }
+  .loading { text-align: center; padding: 48px 0; color: var(--text-3); }
+  .spin { -webkit-animation: spin 0.9s linear infinite; animation: spin 0.9s linear infinite; }
+  @-webkit-keyframes spin { to { -webkit-transform: rotate(360deg); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* monogram tiles stand in for app icons */
+  .tile { width: 46px; height: 46px; line-height: 46px; border-radius: 12px; text-align: center; font-size: 16px; font-weight: 700; letter-spacing: -0.02em; color: #fff; flex-shrink: 0; background-image: linear-gradient(160deg, rgba(255,255,255,0.20), rgba(255,255,255,0) 55%, rgba(0,0,0,0.18)); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.09); }
+  .tile.dark { color: #0B0D12; }
+  .tile.sm { width: 40px; height: 40px; line-height: 40px; font-size: 14px; border-radius: 11px; }
+  .icon-tile { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; text-align: center; background: var(--card-3); color: var(--text-2); }
+  .icon-tile .i { width: 22px; height: 22px; margin-top: 11px; }
+
+  /* ---- devices ---- */
+  .device-hero { display: flex; align-items: center; flex-wrap: wrap; padding: 20px; border-radius: 18px; background: linear-gradient(120deg, var(--primary-bg), rgba(0,0,0,0) 65%), var(--card); border: 1px solid var(--primary-dim); margin-bottom: 14px; }
+  .hero-badge { width: 54px; height: 54px; border-radius: 15px; background: var(--primary); color: #fff; text-align: center; margin-right: 16px; flex-shrink: 0; box-shadow: 0 8px 22px var(--primary-dim); }
+  .hero-badge .i { width: 26px; height: 26px; margin-top: 14px; }
+  .device-info { flex: 1; min-width: 160px; }
+  .device-name { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+  .device-meta { display: flex; align-items: center; color: var(--text-2); font-size: 13px; margin-top: 3px; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 8px; box-shadow: 0 0 0 3px var(--ok-bg); }
+  .hero-actions { margin-left: auto; padding-left: 12px; }
+  .hero-actions .btn { margin: 4px 0 4px 6px; }
+  .quick-grid { display: flex; flex-wrap: wrap; margin: 0 -6px 8px; }
+  .quick { width: calc(25% - 12px); margin: 0 6px 12px; padding: 16px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); text-align: left; transition: background 0.15s, border-color 0.15s; }
+  .quick .i { width: 22px; height: 22px; color: var(--primary); display: block; margin-bottom: 14px; }
+  .quick-title { display: block; font-weight: 600; font-size: 14px; color: var(--text); }
+  .quick-sub { display: block; color: var(--text-3); font-size: 12px; margin-top: 2px; }
+  .connect-hero { display: flex; align-items: flex-start; margin-bottom: 18px; }
+  .connect-hero .icon-tile { margin-right: 14px; background: var(--primary-bg); color: var(--primary); }
+  .connect-actions { display: flex; flex-wrap: wrap; margin: 0 -5px; }
+  .connect-actions .btn { margin: 0 5px; }
+  .connect-actions .btn:first-child { flex: 1; }
+  .list-row, .saved-device { display: flex; align-items: center; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); margin-bottom: 8px; text-align: left; width: 100%; transition: background 0.15s, border-color 0.15s; }
+  button.saved-device, button.guide-card { display: block; }
+  .row-in { display: flex; align-items: center; width: 100%; }
+  .saved-device { cursor: pointer; }
+  .row-info { flex: 1; min-width: 0; margin: 0 14px; }
+  .row-title, .pkg-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-sub, .pkg-id { color: var(--text-3); font-size: 12px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chev { color: var(--text-3); }
+
+  /* ---- store ---- */
+  .filter-row { margin: 0 0 18px; white-space: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .filter-chip { display: inline-block; height: 32px; line-height: 30px; padding: 0 14px; margin-right: 6px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--card); color: var(--text-2); font-size: 13px; font-weight: 500; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+  .filter-chip.active { background: var(--text); border-color: var(--text); color: var(--bg); }
+  .store-grid { display: flex; flex-wrap: wrap; margin: 0 -6px; }
+  .app-card, .app-row { display: flex; align-items: center; width: calc(100% - 12px); margin: 0 6px 12px; padding: 16px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); transition: border-color 0.15s; }
+  .app-info { flex: 1; min-width: 0; margin: 0 14px; }
+  .app-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .app-name .chip { margin-left: 6px; }
+  .app-desc { color: var(--text-2); font-size: 13px; margin-top: 2px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .app-meta { color: var(--text-3); font-size: 12px; margin-top: 4px; }
+  .app-actions { width: 118px; flex-shrink: 0; text-align: center; }
+  .app-actions .btn { width: 100%; padding: 0 8px; }
+  .app-actions .btn + .btn { margin-top: 6px; }
+  .app-actions .btn-after { height: auto; min-height: 30px; line-height: 1.25; padding: 6px 8px; font-size: 12px; white-space: normal; }
+  .progress-wrap { width: 100%; height: 4px; margin-top: 8px; border-radius: 4px; background: var(--card-3); overflow: hidden; display: none; }
+  .progress-bar { height: 100%; width: 0%; border-radius: 4px; background: var(--primary); transition: width 0.3s; }
+  .progress-bar.failed { background: var(--bad); }
+  .progress-label { font-size: 11px; color: var(--text-3); margin-top: 4px; min-height: 0; }
+
+  /* ---- bloatware & toggles ---- */
+  .bloat-row { display: flex; align-items: center; padding: 14px 16px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); margin-bottom: 8px; }
+  .bloat-row .row-info { margin-left: 0; }
+  .toggle { position: relative; width: 44px; height: 26px; flex-shrink: 0; display: block; }
+  .toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--card-3); border-radius: 26px; cursor: pointer; transition: background 0.2s; }
+  .slider:before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.4); transition: -webkit-transform 0.2s, transform 0.2s; }
   input:checked + .slider { background: var(--primary); }
-  input:checked + .slider:before { transform: translateX(20px); }
-  .installed-row { display: flex; align-items: center; background: #111; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; gap: 12px; }
-  .pkg-name { font-size: 14px; font-weight: 600; flex: 1; }
-  .pkg-id { color: #333; font-size: 10px; margin-top: 2px; }
-  .guide-card { display: flex; align-items: center; background: #111; border-radius: 14px; padding: 16px; margin-bottom: 10px; cursor: pointer; transition: background 0.15s; gap: 14px; }
-  .guide-card:hover { background: #1a1a1a; }
-  .guide-icon-box { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
-  .step { background: #111; border-radius: 12px; padding: 16px; margin-bottom: 8px; cursor: pointer; }
-  .step-header { display: flex; align-items: center; gap: 12px; }
-  .step-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
-  .step-body { display: none; padding: 12px 0 0 40px; color: #888; font-size: 13px; line-height: 1.6; }
+  input:checked + .slider:before { -webkit-transform: translateX(18px); transform: translateX(18px); }
+
+  /* ---- guides ---- */
+  .choice-grid { display: flex; flex-wrap: wrap; margin: 0 -5px 8px; }
+  .choice { width: calc(50% - 10px); margin: 0 5px 10px; padding: 16px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+  .choice .i { width: 22px; height: 22px; display: block; margin-bottom: 10px; }
+  .choice-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .choice-body { color: var(--text-2); font-size: 12px; line-height: 1.45; margin-bottom: 10px; }
+  .guide-card { display: flex; align-items: center; width: 100%; padding: 14px 16px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); margin-bottom: 8px; text-align: left; transition: background 0.15s, border-color 0.15s; }
+  .guide-icon-box { width: 44px; height: 44px; border-radius: 12px; text-align: center; flex-shrink: 0; }
+  .guide-icon-box .i { width: 22px; height: 22px; margin-top: 11px; }
+  .guide-steps { color: var(--primary); font-size: 12px; font-weight: 500; margin-top: 3px; }
+  .step { background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 8px; cursor: pointer; }
+  .step-header { display: flex; align-items: center; padding: 14px 16px; }
+  .step-num { width: 28px; height: 28px; line-height: 28px; border-radius: 50%; text-align: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; margin-right: 14px; }
+  .step-title { flex: 1; font-weight: 500; font-size: 14px; }
+  .step-arrow { color: var(--text-3); transition: -webkit-transform 0.2s, transform 0.2s; }
+  .step.open .step-arrow { -webkit-transform: rotate(180deg); transform: rotate(180deg); }
+  .step-body { display: none; padding: 0 16px 16px 58px; color: var(--text-2); font-size: 14px; line-height: 1.6; }
   .step-body.open { display: block; }
-  .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 14px 20px; font-size: 14px; font-weight: 500; z-index: 999; transform: translateY(100px); opacity: 0; transition: all 0.3s; max-width: 300px; }
-  .toast.show { transform: translateY(0); opacity: 1; }
-  .toast.success { border-color: #27ae6055; color: #27ae60; }
-  .toast.error { border-color: #c0392b55; color: #c0392b; }
-  .toast.info { border-color: var(--primary-dim); color: var(--primary); }
-  .status-bar { background: #0f0f0f; border-top: 1px solid #1a1a1a; position: fixed; bottom: 0; left: 200px; right: 0; padding: 8px 24px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: #444; }
-  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #c0392b; }
-  .filter-row { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
-  .filter-chip { padding: 7px 14px; border-radius: 20px; border: 1px solid #222; background: #111; color: #666; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-  .filter-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
-  .empty { color: #333; font-size: 14px; text-align: center; padding: 60px 0; }
-  .loading { text-align: center; padding: 40px; color: #444; }
-  .saved-device { display: flex; align-items: center; background: #111; border-radius: 12px; padding: 14px; margin-bottom: 8px; border-left: 3px solid var(--primary); gap: 12px; cursor: pointer; transition: background 0.15s; }
-  .saved-device:hover { background: #1a1a1a; }
-  :root { --primary: #2E86FF; --primary-bg: #2E86FF15; --primary-dim: #2E86FF44; }
+  .back-link { display: inline-block; color: var(--text-2); font-size: 13px; font-weight: 500; margin-bottom: 18px; }
+  .back-link .i { width: 16px; height: 16px; margin: -2px 4px 0 0; }
+
+  /* ---- remote ---- */
+  .remote-layout { display: flex; flex-wrap: wrap; align-items: flex-start; margin: 0 -10px; }
+  .remote-col, .remote-side { width: 100%; padding: 0 10px; }
+  .remote { max-width: 340px; margin: 0 auto 16px; padding: 22px 24px 26px; border-radius: 32px; background: linear-gradient(180deg, #1A1D26, #111319); border: 1px solid var(--line-2); box-shadow: 0 24px 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05); -webkit-user-select: none; user-select: none; }
+  .r-row { display: flex; justify-content: space-between; align-items: center; }
+  .rb { width: 58px; height: 58px; border-radius: 50%; background: var(--card-2); border: 1px solid var(--line-2); color: var(--text); transition: background 0.12s, color 0.12s, -webkit-transform 0.08s, transform 0.08s, opacity 0.2s; }
+  .rb .i, .dp .i, .rocker button .i { display: block; margin: 0 auto; width: 22px; height: 22px; }
+  .rb-sm { width: 46px; height: 46px; }
+  .rb-sm .i { width: 18px; height: 18px; }
+  .rb-power { color: var(--bad); }
+  .rb-label { display: block; text-align: center; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: var(--text-3); margin-top: 6px; text-transform: uppercase; }
+  .r-key { text-align: center; }
+  .dpad { position: relative; width: 232px; height: 232px; margin: 20px auto 22px; border-radius: 50%; background: radial-gradient(circle at 50% 38%, #262A35, #1A1D25 72%); border: 1px solid var(--line-2); box-shadow: inset 0 2px 10px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.03); }
+  .dp { position: absolute; width: 66px; height: 66px; border-radius: 50%; color: var(--text-2); transition: background 0.12s, color 0.12s, opacity 0.2s; }
+  .dp .i { width: 26px; height: 26px; }
+  .dp-up { top: 4px; left: 83px; }
+  .dp-down { bottom: 4px; left: 83px; }
+  .dp-left { left: 4px; top: 83px; }
+  .dp-right { right: 4px; top: 83px; }
+  .dp-ok { position: absolute; left: 50%; top: 50%; width: 94px; height: 94px; margin: -47px 0 0 -47px; border-radius: 50%; background: var(--card-3); border: 1px solid var(--line-2); font-weight: 700; font-size: 15px; letter-spacing: 0.05em; color: var(--text); box-shadow: 0 6px 18px rgba(0,0,0,0.4); transition: background 0.12s, color 0.12s, -webkit-transform 0.08s, transform 0.08s; }
+  .rb:active, .rb.pressed, .dp:active, .dp.pressed, .dp-ok:active, .dp-ok.pressed, .rocker button:active, .rocker button.pressed { background: var(--primary-bg); color: var(--primary); }
+  .rb.pressed, .dp-ok.pressed { -webkit-transform: scale(0.95); transform: scale(0.95); }
+  .na { opacity: 0.28; }
+  .r-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; }
+  .rocker { width: 58px; border-radius: 29px; background: var(--card-2); border: 1px solid var(--line-2); overflow: hidden; text-align: center; }
+  .rocker button { display: block; width: 58px; height: 54px; color: var(--text); transition: background 0.12s, color 0.12s; }
+  .rocker span { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--text-3); }
+  .r-media { text-align: center; }
+  .r-media .rb { display: block; margin: 0 auto 10px; }
+  .r-media .r-row .rb { display: inline-block; margin: 0 4px; }
+  .seg { display: inline-block; padding: 3px; border-radius: 11px; background: var(--card-2); border: 1px solid var(--line); white-space: nowrap; }
+  .seg button { display: inline-block; height: 32px; line-height: 32px; padding: 0 13px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text-2); transition: background 0.15s, color 0.15s; }
+  .seg button .i { width: 15px; height: 15px; margin: -2px 6px 0 0; }
+  .seg button.on { background: var(--card-3); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
+  .brand-grid { display: flex; flex-wrap: wrap; margin: 12px -4px 0; }
+  .brand-btn { width: calc(33.333% - 8px); margin: 4px; height: 44px; border-radius: 10px; background: var(--card-2); border: 1px solid var(--line-2); font-weight: 600; font-size: 13px; color: var(--text); padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand-btn.suggested { border-color: var(--primary); color: var(--primary); }
+  .ir-test { text-align: center; padding: 6px 0 2px; }
+  .ir-test .big { display: block; width: 76px; height: 76px; margin: 14px auto; border-radius: 50%; background: var(--bad-bg); color: var(--bad); }
+  .ir-test .big .i { width: 30px; height: 30px; display: block; margin: 0 auto; }
+  .ir-test .count { color: var(--text-3); font-size: 12px; }
+  .kbd { display: inline-block; min-width: 22px; padding: 0 6px; height: 22px; line-height: 20px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--card-2); font-size: 11px; font-weight: 600; color: var(--text-2); text-align: center; margin-right: 6px; }
+  .shortcuts { color: var(--text-3); font-size: 12px; line-height: 2.1; }
+  .shortcuts span { white-space: nowrap; margin-right: 12px; }
+
+  /* ---- overlays ---- */
+  .overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; background: rgba(4,5,8,0.74); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .overlay.open { display: block; -webkit-animation: fade-in 0.18s ease; animation: fade-in 0.18s ease; }
+  @-webkit-keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  .sheet { position: relative; max-width: 500px; margin: 48px auto; padding: 24px; border-radius: 20px; background: var(--card); border: 1px solid var(--line-2); box-shadow: 0 30px 80px rgba(0,0,0,0.6); }
+  .sheet h2 { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin-right: 40px; }
+  .sheet .lead { color: var(--text-2); font-size: 14px; line-height: 1.55; margin: 6px 0 18px; }
+  .sheet-close { position: absolute; top: 16px; right: 16px; width: 34px; height: 34px; border-radius: 50%; background: var(--card-2); color: var(--text-2); }
+  .sheet-close .i { display: block; margin: 0 auto; width: 16px; height: 16px; }
+  .type-pick { display: flex; margin: 0 -5px 16px; }
+  .type-card { flex: 1; margin: 0 5px; padding: 14px; border-radius: 14px; background: var(--card-2); border: 1px solid var(--line-2); text-align: left; }
+  .type-card.on { border-color: var(--primary); background: var(--primary-bg); }
+  .type-card .i { width: 22px; height: 22px; display: block; margin-bottom: 8px; color: var(--text-2); }
+  .type-card.on .i { color: var(--primary); }
+  .type-card small { display: block; color: var(--text-3); font-size: 11px; margin-top: 2px; }
+  .steps-box { background: var(--card-2); border-radius: 14px; padding: 16px; }
+  .steps-box .eyebrow { color: var(--text-3); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px; }
+  .ostep { display: flex; margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
+  .ostep:last-child { margin-bottom: 0; }
+  .ostep-num { width: 22px; height: 22px; line-height: 22px; border-radius: 50%; background: var(--primary-bg); color: var(--primary); text-align: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-right: 12px; margin-top: 1px; }
+  .info-box { display: flex; padding: 12px; border-radius: 12px; background: var(--primary-bg); color: var(--text-2); font-size: 12px; line-height: 1.5; margin-top: 12px; }
+  .info-box .i { color: var(--primary); margin-right: 10px; width: 16px; height: 16px; margin-top: 1px; }
+  .code-line { font-family: "SF Mono", Menlo, Consolas, "Roboto Mono", monospace; color: var(--primary); }
+  .scan-wait { text-align: center; padding: 28px 0 16px; }
+  .scan-wait .i { width: 34px; height: 34px; color: var(--primary); display: block; margin: 0 auto 14px; }
+  .status-line { margin-top: 14px; font-size: 13px; color: var(--text-2); text-align: center; min-height: 18px; }
+  .status-line.ok { color: var(--ok); }
+  .status-line.bad { color: var(--bad); }
+
+  .toast { position: fixed; right: 24px; bottom: 24px; z-index: 2000; display: flex; align-items: center; max-width: 400px; padding: 12px 16px 12px 14px; border-radius: 12px; background: #1F222B; border: 1px solid var(--line-2); box-shadow: 0 14px 36px rgba(0,0,0,0.5); font-size: 14px; font-weight: 500; line-height: 1.4; color: var(--text); opacity: 0; -webkit-transform: translateY(12px); transform: translateY(12px); pointer-events: none; transition: opacity 0.2s, -webkit-transform 0.2s, transform 0.2s; }
+  .toast.show { opacity: 1; -webkit-transform: none; transform: none; pointer-events: auto; }
+  .toast .i { margin-right: 10px; }
+  .toast.success .i { color: var(--ok); }
+  .toast.error .i { color: var(--bad); }
+  .toast.info .i { color: var(--primary); }
+
+  /* hover only where there is a real pointer (no sticky hover on touch) */
+  @media (hover: hover) {
+    .nav-btn:hover { background: var(--card-2); color: var(--text); }
+    .nav-btn.active:hover { background: var(--primary-bg); color: var(--primary); }
+    .btn:hover { -webkit-filter: brightness(1.08); filter: brightness(1.08); }
+    .btn-outline:hover { background: var(--card-3); -webkit-filter: none; filter: none; }
+    .btn-ghost:hover { background: var(--card-2); color: var(--text); }
+    .quick:hover, .saved-device:hover, .guide-card:hover { background: var(--card-2); border-color: var(--line-2); }
+    .app-card:hover { border-color: var(--line-2); }
+    .filter-chip:hover { color: var(--text); border-color: var(--text-3); }
+    .filter-chip.active:hover { color: var(--bg); }
+    .rb:hover, .dp:hover, .rocker button:hover { color: var(--primary); }
+    .brand-btn:hover { background: var(--card-3); }
+  }
+
+  @media (min-width: 1180px) {
+    .app-card { width: calc(50% - 12px); }
+  }
+  @media (min-width: 980px) {
+    .remote-col { width: 380px; }
+    .remote-side { width: calc(100% - 380px); }
+  }
+  @media (max-width: 1000px) {
+    .quick { width: calc(50% - 12px); }
+  }
+  /* Short landscape screens, like a 7" tablet (1024 x 600): keep the whole
+     remote on screen without scrolling. */
+  @media (min-width: 761px) and (max-height: 720px) {
+    .main { padding-top: 18px; }
+    .page-head { margin-bottom: 14px; }
+    h1 { font-size: 23px; }
+    .remote { max-width: 300px; padding: 14px 18px 16px; border-radius: 26px; }
+    .rb { width: 48px; height: 48px; }
+    .rb .i { width: 20px; height: 20px; }
+    .rb-sm { width: 40px; height: 40px; }
+    .rb-sm .i { width: 17px; height: 17px; }
+    .rb-label { margin-top: 3px; font-size: 9px; }
+    .dpad { width: 184px; height: 184px; margin: 10px auto; }
+    .dp { width: 52px; height: 52px; }
+    .dp .i { width: 22px; height: 22px; }
+    .dp-up, .dp-down { left: 65px; }
+    .dp-left, .dp-right { top: 65px; }
+    .dp-ok { width: 74px; height: 74px; margin: -37px 0 0 -37px; font-size: 14px; }
+    .r-bottom { margin-top: 10px; }
+    .rocker { width: 48px; border-radius: 24px; }
+    .rocker button { width: 48px; height: 44px; }
+    .r-media .rb { margin-bottom: 6px; }
+  }
+  @media (min-width: 980px) and (max-height: 720px) {
+    .remote-col { width: 330px; }
+    .remote-side { width: calc(100% - 330px); }
+  }
+  @media (max-width: 760px) {
+    .sidebar { top: auto; right: 0; width: auto; height: 62px; padding: 0 2px; flex-direction: row; border-right: 0; border-top: 1px solid var(--line); background: var(--panel); }
+    .sidebar .logo, .sidebar .side-foot { display: none; }
+    .nav-btn { flex: 1; width: auto; min-width: 0; height: 62px; line-height: 1.2; padding: 0 2px; margin: 0; border-radius: 0; font-size: 10.5px; font-weight: 600; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+    .nav-btn .i { display: block; width: 22px; height: 22px; margin: 0 auto 4px; }
+    .nav-btn.active, .nav-btn:hover, .nav-btn.active:hover { background: none; }
+    .topbar { display: flex; position: fixed; top: 0; left: 0; right: 0; height: 58px; padding: 0 16px; align-items: center; justify-content: space-between; background: rgba(10,11,15,0.94); border-bottom: 1px solid var(--line); z-index: 40; }
+    .topbar .logo { padding: 0; font-size: 17px; }
+    .topbar .logo-mark { width: 30px; height: 30px; border-radius: 9px; margin-right: 9px; }
+    .topbar .logo-mark svg { width: 24px; height: 24px; margin-top: 2px; }
+    .topbar .conn-pill { padding: 6px 10px; max-width: 58%; }
+    .main { margin-left: 0; padding: 78px 16px 96px; }
+    h1 { font-size: 24px; }
+    .page-head { margin-bottom: 18px; }
+    .toast { left: 16px; right: 16px; bottom: 76px; max-width: none; }
+    .sheet { margin: 16px; padding: 20px; }
+    .hero-actions { margin-left: 0; padding-left: 0; width: 100%; margin-top: 12px; }
+    .hero-actions .btn { margin: 0 8px 0 0; }
+    .app-card { padding: 14px; }
+    .app-info { margin: 0 12px; }
+    .app-actions { width: 96px; }
+    .brand-btn { width: calc(50% - 8px); }
+    .choice { width: calc(100% - 10px); }
+    .remote { padding: 18px 18px 22px; }
+  }
 </style>
 </head>
-<body>
-<div class="sidebar">
-  <div class="logo"><img src="data:image/png;base64,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IIgCAAAAQRQAAAAIogAAAEAQBQAAAIIoAAAAEEQBAACAIAoAAAAEUQAAACCIAgAAAEEUAAAACKIAAABAEAUAAACCKAAAABBEAQAAgCAKAAAABFEAAAAgiAIAAABBFAAAAAiiAAAAQBAFAAAAgigAAAAQRAEAAIAgCgAAAARRAAAAIIgCAAAAQRQAAAAIogAAAEAQBQAAAIIoAAAAEEQBAACAIAoAAAAEUQAAACCIAgAAAEEUAAAACKIAAABAEAUAAACCKAAAABBEAQAAgCAKAAAABFEAAAAgiAIAAABBFAAAAAiiAAAAQBAFAAAAgigAAAAQRAEAAIAgCgAAAARRAAAAIIgCAAAAQRQAAAAIogAAAEAQBQAAAIIoAAAAEEQBAACAIAoAAAAEUQAAACCIAgAAAEEUAAAACKIAAABAEAUAAACCKAAAABBEAQAAgCAKAAAABFEAAAAgiAIAAABBFAAAAAiiAAAAQBAFAAAAgigAAAAQRAEAAIAgCgAAAARRAAAAIIgCAAAAQRQAAAAIogAAAEAQBQAAAIIoAAAAEEQBAACAIAoAAAAEUQAAACCIAgAAAEEUAAAACKIAAABAEAUAAACCKAAAABBEAQAAgCAKAAAABFEAAAAgiAIAAABBFAAAAAiiAAAAQBAFAAAAgigAAAAQRAEAAIAgCgAAAARRAAAAIIgCAAAAQRQAAAAIogAAAEAQBQAAAIIoAAAAEEQBAACAIAoAAAAEUQAAACCIAgAAAEEUAAAACKIAAABAEAUAAACCKAAAABBEAQAAgCAKAAAABFEAAAAgiAIAAABBFAAAAAiiAAAAQBAFAAAAgigAAAAQRAEAAIAgCgAAAARRAAAAIIgCAAAAQRQAAAAIogAAAEAQBQAAAIIoAAAAEEQBAACAIAoAAAAEUQAAACCIAgAAAEEUAAAACKIAAABAEAUAAACCKAAAABBEAQAAgCAKAAAABFEAAAAgiAIAAABBFAAAAAiiAAAAQBAFAAAAgigAAAAQRAEAAIAgCgAAAARRAAAAIIgCAAAAQRQAAAAIogAAAEAQBQAAAIIoAAAAEEQBAACAIAoAAAAE+X8AHr5QyyG7UwAAAABJRU5ErkJggg=="> Helm</div>
-  <button class="nav-btn active" onclick="showPage('devices', event)"><span class="nav-icon">📺</span> Devices</button>
-  <button class="nav-btn" onclick="showPage('store', event)"><span class="nav-icon">📦</span> Store</button>
-  <button class="nav-btn" onclick="showPage('bloatware', event)"><span class="nav-icon">🗑️</span> Bloatware</button>
-  <button class="nav-btn" onclick="showPage('apps', event)"><span class="nav-icon">📱</span> My Apps</button>
-  <button class="nav-btn" onclick="showPage('guides', event)"><span class="nav-icon">📖</span> Guides</button>
-</div>
+<body class="conn-off">
+<nav class="sidebar" id="nav">
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm</div>
+  <button class="nav-btn active" data-page="devices" onclick="showPage('devices', event)"><i data-icon="tv"></i><span class="nav-label">Devices</span></button>
+  <button class="nav-btn" data-page="remote" onclick="showPage('remote', event)"><i data-icon="remote"></i><span class="nav-label">Remote</span></button>
+  <button class="nav-btn" data-page="store" onclick="showPage('store', event)"><i data-icon="shopping-bag"></i><span class="nav-label">Store</span></button>
+  <button class="nav-btn" data-page="apps" onclick="showPage('apps', event)"><i data-icon="layout-grid"></i><span class="nav-label">My Apps</span></button>
+  <button class="nav-btn" data-page="bloatware" onclick="showPage('bloatware', event)"><i data-icon="sparkles"></i><span class="nav-label">Bloatware</span></button>
+  <button class="nav-btn" data-page="guides" onclick="showPage('guides', event)"><i data-icon="book-open"></i><span class="nav-label">Guides</span></button>
+  <div class="side-foot">
+    <div class="conn-pill"><span class="status-dot" id="status-dot"></span><span class="conn-text" id="status-text">Not connected</span></div>
+  </div>
+</nav>
+<header class="topbar">
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm</div>
+  <div class="conn-pill"><span class="status-dot"></span><span class="conn-text">Not connected</span></div>
+</header>
 
-<div class="main">
-  <div class="page active" id="page-devices">
-    <h1>Devices</h1>
-    <p class="subtitle">Connect to your Fire TV or Google TV</p>
+<main class="main">
+  <section class="page active" id="page-devices">
+    <div class="page-head">
+      <h1>Devices</h1>
+      <p class="subtitle">Connect to your Fire TV, Google TV or Android TV</p>
+    </div>
     <div id="connected-view" style="display:none">
-      <div class="connected-card">
-        <div class="dot"></div>
+      <div class="device-hero connected-card">
+        <div class="hero-badge" id="device-badge"><i data-icon="tv"></i></div>
         <div class="device-info">
           <div class="device-name" id="device-name">My TV</div>
-          <div class="device-ip" id="device-ip"></div>
+          <div class="device-meta"><span class="live-dot"></span><span>Connected · <span id="device-ip"></span></span></div>
         </div>
-        <button class="btn btn-sm btn-outline" onclick="disconnect()">Disconnect</button>
-        <button class="btn btn-sm btn-danger" onclick="reboot()">🔄 Reboot</button>
+        <div class="hero-actions">
+          <button class="btn btn-sm btn-outline" onclick="disconnect()"><i data-icon="log-out"></i>Disconnect</button>
+          <button class="btn btn-sm btn-danger" onclick="reboot()"><i data-icon="rotate-cw"></i>Reboot</button>
+        </div>
       </div>
+      <div class="quick-grid">
+        <button class="quick" onclick="showPage('remote')"><i data-icon="remote"></i><span class="quick-title">Remote</span><span class="quick-sub">Control and type</span></button>
+        <button class="quick" onclick="showPage('store')"><i data-icon="shopping-bag"></i><span class="quick-title">Store</span><span class="quick-sub">Install apps</span></button>
+        <button class="quick" onclick="showPage('apps')"><i data-icon="layout-grid"></i><span class="quick-title">My Apps</span><span class="quick-sub">See and remove</span></button>
+        <button class="quick" onclick="showPage('bloatware')"><i data-icon="sparkles"></i><span class="quick-title">Bloatware</span><span class="quick-sub">Turn off junk</span></button>
+      </div>
+      <div id="other-devices"></div>
     </div>
     <div id="connect-view">
       <div class="card">
-        <button class="btn" onclick="openOnboarding()" style="width:100%;margin-bottom:12px;background:#2980b9">📡 Scan for my TV</button>
-        <div style="text-align:center;margin-bottom:14px">
-          <a href="#" onclick="openOnboarding();return false" style="color:#888;font-size:12px;text-decoration:underline">Need help getting your TV ready?</a>
+        <div class="connect-hero">
+          <div class="icon-tile"><i data-icon="radar"></i></div>
+          <div>
+            <div class="card-title">Connect your TV</div>
+            <div class="card-sub">Helm finds TVs on your Wi‑Fi that have developer options turned on.</div>
+          </div>
         </div>
-        <div style="border-top:1px solid #2a2a2a;margin:14px 0;padding-top:14px">
-          <label style="color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:8px">Or enter IP manually</label>
-          <input class="input" id="ip-input" placeholder="192.168.1.74" type="text" onkeydown="if(event.key==='Enter')connect()">
+        <div class="connect-actions">
+          <button class="btn" onclick="findMyTv()"><i data-icon="scan-search"></i>Find my TV</button>
+          <button class="btn btn-outline" onclick="openOnboarding()">Setup help</button>
+        </div>
+        <div class="divider"><span>or enter the TV's IP address</span></div>
+        <div class="field-row">
+          <input class="input" id="ip-input" placeholder="192.168.1.74" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.keyCode===13)connect()">
           <button class="btn" onclick="connect()" id="connect-btn">Connect</button>
         </div>
+        <div class="hint">On the TV: Settings → Network &amp; Internet → your Wi‑Fi shows the IP address. Newer Google TVs may need you to <a href="#" onclick="openPairing();return false">pair with a code</a>.</div>
       </div>
       <div id="saved-devices"></div>
     </div>
+  </section>
 
-    <div id="onboarding-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000d;z-index:1000;overflow-y:auto">
-      <div style="max-width:480px;margin:0 auto;padding:24px" id="onboarding-content"></div>
+  <section class="page" id="page-remote">
+    <div class="page-head head-row">
+      <div>
+        <h1>Remote</h1>
+        <p class="subtitle" id="remote-sub">Control your TV over Wi‑Fi</p>
+      </div>
+      <div class="seg" id="remote-mode" style="display:none">
+        <button data-mode="wifi" onclick="setRemoteMode('wifi')"><i data-icon="wifi"></i>Wi‑Fi</button><button data-mode="ir" onclick="setRemoteMode('ir')"><i data-icon="radio"></i>IR</button>
+      </div>
     </div>
-  </div>
+    <div id="remote-notice"></div>
+    <div class="remote-layout">
+      <div class="remote-col">
+        <div class="remote" id="remote">
+          <div class="r-row">
+            <div class="r-key"><button class="rb rb-power" data-key="power" onclick="press('power', this)" title="Power"><i data-icon="power"></i></button><span class="rb-label">Power</span></div>
+            <div class="r-key"><button class="rb" data-key="input" onclick="press('input', this)" title="Input"><i data-icon="log-in"></i></button><span class="rb-label">Input</span></div>
+            <div class="r-key"><button class="rb" data-key="mute" onclick="press('mute', this)" title="Mute"><i data-icon="volume-x"></i></button><span class="rb-label">Mute</span></div>
+          </div>
+          <div class="dpad">
+            <button class="dp dp-up" data-key="up" onclick="press('up', this)" title="Up"><i data-icon="chevron-up"></i></button>
+            <button class="dp dp-left" data-key="left" onclick="press('left', this)" title="Left"><i data-icon="chevron-left"></i></button>
+            <button class="dp dp-right" data-key="right" onclick="press('right', this)" title="Right"><i data-icon="chevron-right"></i></button>
+            <button class="dp dp-down" data-key="down" onclick="press('down', this)" title="Down"><i data-icon="chevron-down"></i></button>
+            <button class="dp-ok" data-key="ok" onclick="press('ok', this)">OK</button>
+          </div>
+          <div class="r-row">
+            <div class="r-key"><button class="rb" data-key="back" onclick="press('back', this)" title="Back"><i data-icon="undo-2"></i></button><span class="rb-label">Back</span></div>
+            <div class="r-key"><button class="rb" data-key="home" onclick="press('home', this)" title="Home"><i data-icon="house"></i></button><span class="rb-label">Home</span></div>
+            <div class="r-key"><button class="rb" data-key="menu" onclick="press('menu', this)" title="Settings"><i data-icon="settings"></i></button><span class="rb-label">Settings</span></div>
+          </div>
+          <div class="r-bottom">
+            <div class="rocker"><button data-key="vol_up" onclick="press('vol_up', this)" title="Volume up"><i data-icon="plus"></i></button><span>VOL</span><button data-key="vol_down" onclick="press('vol_down', this)" title="Volume down"><i data-icon="minus"></i></button></div>
+            <div class="r-media">
+              <button class="rb" data-key="play_pause" onclick="press('play_pause', this)" title="Play / pause"><i data-icon="play-pause"></i></button>
+              <div class="r-row"><button class="rb rb-sm" data-key="rewind" onclick="press('rewind', this)" title="Rewind"><i data-icon="rewind"></i></button><button class="rb rb-sm" data-key="ffwd" onclick="press('ffwd', this)" title="Fast forward"><i data-icon="fast-forward"></i></button></div>
+            </div>
+            <div class="rocker"><button data-key="ch_up" onclick="press('ch_up', this)" title="Channel up"><i data-icon="chevron-up"></i></button><span>CH</span><button data-key="ch_down" onclick="press('ch_down', this)" title="Channel down"><i data-icon="chevron-down"></i></button></div>
+          </div>
+        </div>
+      </div>
+      <div class="remote-side">
+        <div class="card" id="kbd-card">
+          <div class="card-title-row"><i data-icon="keyboard"></i>Type on your TV</div>
+          <p class="card-sub">Sends text to the box that's selected on the TV: searches, Wi‑Fi passwords, sign-ins.</p>
+          <div class="field-row" style="margin-top:14px">
+            <input class="input" id="tv-text" placeholder="Type here" autocomplete="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.keyCode===13)sendText()">
+            <button class="btn" onclick="sendText()">Send</button>
+          </div>
+          <div class="btn-row" style="margin-top:8px">
+            <button class="btn btn-sm btn-outline" onclick="press('del', this)"><i data-icon="delete"></i>Delete</button>
+            <button class="btn btn-sm btn-outline" onclick="press('enter', this)"><i data-icon="corner-down-left"></i>Enter</button>
+          </div>
+        </div>
+        <div class="card" id="ir-card" style="display:none"></div>
+        <div class="card" id="shortcut-card">
+          <div class="card-title-row"><i data-icon="info"></i>Keyboard shortcuts</div>
+          <div class="shortcuts" style="margin-top:8px">
+            <span><b class="kbd">← ↑ → ↓</b>Move</span> <span><b class="kbd">Enter</b>OK</span> <span><b class="kbd">Esc</b>Back</span> <span><b class="kbd">H</b>Home</span> <span><b class="kbd">+</b><b class="kbd">−</b>Volume</span> <span><b class="kbd">M</b>Mute</span> <span><b class="kbd">Space</b>Play / pause</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <div class="page" id="page-store">
-    <h1>App Store</h1>
-    <p class="subtitle">Install apps directly to your TV</p>
+  <section class="page" id="page-store">
+    <div class="page-head">
+      <h1>Store</h1>
+      <p class="subtitle">Install apps straight to your TV</p>
+    </div>
     <div class="filter-row" id="store-filters"></div>
-    <div id="store-list"></div>
-  </div>
+    <div class="store-grid" id="store-list"></div>
+  </section>
 
-  <div class="page" id="page-bloatware">
-    <h1>Bloatware</h1>
-    <p class="subtitle">Disable pre-installed junk</p>
+  <section class="page" id="page-bloatware">
+    <div class="page-head head-row">
+      <div>
+        <h1>Bloatware</h1>
+        <p class="subtitle">Turn off pre-installed apps you don't use. You can turn them back on any time.</p>
+      </div>
+      <button class="btn btn-sm btn-danger" id="disable-all" onclick="disableAll()" style="margin-top:10px">Disable all</button>
+    </div>
     <div id="bloat-list"></div>
-    <button class="btn btn-danger" style="margin-top:8px" onclick="disableAll()">Disable All</button>
-  </div>
+  </section>
 
-  <div class="page" id="page-apps">
-    <h1>My Apps</h1>
-    <p class="subtitle" id="apps-subtitle">Sideloaded apps on your TV</p>
-    <div id="apps-list"><div class="empty">Connect to a device first</div></div>
-  </div>
+  <section class="page" id="page-apps">
+    <div class="page-head head-row">
+      <div>
+        <h1>My Apps</h1>
+        <p class="subtitle" id="apps-subtitle">Apps you've added to your TV</p>
+      </div>
+      <button class="btn btn-sm btn-outline" onclick="loadApps()" style="margin-top:10px"><i data-icon="refresh-cw"></i>Refresh</button>
+    </div>
+    <div id="apps-list"><div class="empty">Connect to a TV first</div></div>
+  </section>
 
-  <div class="page" id="page-guides">
-    <h1>Guides</h1>
-    <p class="subtitle">Get the most out of your setup</p>
+  <section class="page" id="page-guides">
+    <div class="page-head">
+      <h1>Guides</h1>
+      <p class="subtitle">Get the most out of your setup</p>
+    </div>
     <div id="guides-list"></div>
     <div id="guide-detail" style="display:none"></div>
-  </div>
-</div>
+  </section>
+</main>
 
-<div class="status-bar">
-  <div class="status-dot" id="status-dot"></div>
-  <span id="status-text">Not connected to a device</span>
+<div class="overlay" id="onboarding-overlay" onclick="if(event.target===this)closeOnboarding()">
+  <div class="sheet" id="onboarding-content"></div>
+</div>
+<div class="overlay" id="dialog" onclick="if(event.target===this)closeDialog(false)">
+  <div class="sheet" id="dialog-content" style="max-width:420px;margin-top:18vh"></div>
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
+/* BEGIN HelmIR - generated from HelmAndroid/tools/ir/ir.js by HelmAndroid/tools/ir/inline.mjs; edit ir.js, not this block */
+/* HelmIR - consumer-IR encoders + TV code tables for Helm.
+ * Target: Android ConsumerIrManager.transmit(frequencyHz, int[] pattern) (4.4.3+ semantics:
+ * alternating mark/space durations in microseconds, starting with a mark).
+ * Plain ES5-compatible JS: no imports/exports, no BigInt, no **, 32-bit-safe bit ops only.
+ *
+ * API
+ *   HelmIR.encode(protocol, address, command, opts) -> {frequency, pattern} | null
+ *   HelmIR.keyPattern(brandId, setId, key, opts)    -> {frequency, pattern} | null
+ *   HelmIR.resolve(brandId, setId, key)             -> {protocol, address, command} | null
+ *   HelmIR.powerCandidates(brandId)                 -> [{brand, set, label}] sets that have a power key, in table order
+ *   HelmIR.snapCarrier(hz, ranges)                  -> nearest supported carrier (ranges from getCarrierFrequencies())
+ *   HelmIR.BRANDS, HelmIR.KEYS, HelmIR.PROTOCOLS
+ * opts: toggle 0|1|'auto' (RC5/RC5X/RC6 toggle bit, default 0; it must change on every new press -
+ *       'auto' flips an internal bit each time an RC5/RC6 code is encoded),
+ *       repeats n (extra "button held" frames after the single-press sequence, default 0),
+ *       frequency Hz (override carrier),
+ *       carriers [[min,max],...] or [{min,max},...] (device ranges: carrier is snapped to the nearest one;
+ *       e.g. Samsung IR blasters often list only 30/33/36/38/40/56 kHz).
+ *
+ * PROTOCOLS (address/command semantics == Flipper Zero .ir "parsed" fields read as
+ * little-endian integers, e.g. "address: EA C7 00 00" -> 0xC7EA; Sharp is the exception, see below).
+ * Timings/carriers follow IrpTransmogrifier's IrpProtocols.xml unless noted.
+ *  NEC        addr 0-255 (D), cmd 0-255 (F): D,~D,F,~F, 9ms/4.5ms leader, 564us unit, 38.4kHz, 1 frame.
+ *             repeats -> NEC "ditto" frames (as a held remote).          IRP: NEC1
+ *  NECext     addr 0-65535 = D|S<<8, cmd 0-65535 = F|E<<8 (sent D,S,F,E). IRP: NEC1-f16 (Roku = NECext 0xC7EA)
+ *  Samsung32  addr 0-255 (D, sent twice), cmd 0-255: D,D,F,~F, 4.5ms/4.5ms leader, 1 frame.   IRP: NECx2
+ *  RC5        addr 0-31, cmd 0-63, toggle; 36kHz 889us bi-phase.          IRP: RC5 (F=cmd)
+ *  RC5X       addr 0-31, cmd 0-63 = RC5 commands 64-127 (field bit 0).   IRP: RC5 (F=cmd+64)
+ *  RC6        mode 0, addr 0-255, cmd 0-255, toggle; 36kHz 444us.        IRP: RC6
+ *  SIRC       12-bit Sony: addr 0-31, cmd 0-127; 3 frames, 45ms period, 40kHz.  IRP: Sony12
+ *  SIRC15     addr 0-255.                                                IRP: Sony15
+ *  SIRC20     addr 0-8191 = D|S<<5.                                       IRP: Sony20
+ *  Kaseikyo   Flipper layout: addr = genre2 | genre1<<4 | vendor<<8 | id<<24, cmd 0-1023.
+ *             Bytes: vendor lo, vendor hi, parity|genre1<<4, genre2|cmd<<4, id<<6|cmd>>4, xor.
+ *             37kHz, 432us.  For vendor 0x2002 this is IRP "Panasonic" D=byte2, S=byte3, F=byte4.
+ *  RCA        addr 0-15, cmd 0-255 (Flipper: both sent LSB-first, then ~addr, ~cmd); 4ms/4ms leader,
+ *             500us unit (measured on a TCL remote; IrpTransmogrifier's RCA-38 uses 460), 38kHz
+ *             (IRP RCA-38 with D=bitrev4(addr), F=bitrev8(cmd)).  1 frame.
+ *  RCA56      same as RCA at 56kHz (classic RCA receivers; IrpTransmogrifier "RCA" says 58k).
+ *  Sharp      NOT Flipper semantics: addr = D 0-31, cmd = F 0-255 (IRP "Sharp"). A press is the normal
+ *             frame followed by the inverted-command check frame (67ms frame period); 38kHz, 264us.
+ *
+ * BRANDS[i] = {id, name, sets:[{id, label, source, protocol, address, keys:{...}}]}
+ *   key value: cmd                       (number: uses the set's protocol + address)
+ *            | [address, cmd]            (address override)
+ *            | [address, cmd, protocol]  (protocol override, for remotes that mix protocols)
+ *   The first set of each brand is the most complete modern one; later sets are alternatives
+ *   (some power-only) for a "try power codes until the TV reacts" setup flow.
+ *   Codes come from Flipper-IRDB (github.com/Lucaslhm/Flipper-IRDB @d126fb1b); the tests also
+ *   cross-check them against probonopd/irdb (@11aa5eb3). Per-key provenance:
+ *   `node test_ir.mjs --provenance`. Sources, licensing and checks: README.md in this folder.
+ */
+const HelmIR = (function () {
+  'use strict';
+
+  var MAX_TOTAL = 2000000;
+
+  // ---- sequence builder: signed durations (+mark, -space), merges equal-sign neighbours
+  function Seq() { this.d = []; this.t = 0; }
+  Seq.prototype.add = function (us) {
+    if (!us) return;
+    var n = this.d.length;
+    if (n && (this.d[n - 1] > 0) === (us > 0)) this.d[n - 1] += us; else this.d.push(us);
+    this.t += us < 0 ? -us : us;
+  };
+  Seq.prototype.m = function (us) { this.add(us); };
+  Seq.prototype.s = function (us) { this.add(-us); };
+  // pulse-distance bits: value, count, lsbFirst, [mark0, space0], [mark1, space1]
+  Seq.prototype.pd = function (v, n, lsb, z, o) {
+    for (var i = 0; i < n; i++) {
+      var b = lsb ? (v >>> i) & 1 : (v >>> (n - 1 - i)) & 1;
+      var p = b ? o : z;
+      this.m(p[0]); this.s(p[1]);
+    }
+  };
+  // bi-phase bits (msb first): bit 0 -> z, bit 1 -> o, each a pair of signed unit multiples
+  Seq.prototype.bp = function (v, n, u, z, o) {
+    for (var i = n - 1; i >= 0; i--) {
+      var p = ((v >>> i) & 1) ? o : z;
+      this.add(p[0] * u); this.add(p[1] * u);
+    }
+  };
+  // pad the current frame (started at total time t0) with space up to period us
+  Seq.prototype.to = function (t0, period) { var g = period - (this.t - t0); this.s(g > 0 ? g : 0); };
+
+  function inv(v, n) { return (~v) & ((1 << n) - 1); }
+  function rep(o) { var r = o && o.repeats ? o.repeats | 0 : 0; return r < 0 ? 0 : (r > 40 ? 40 : r); }
+
+  // ---- NEC family (IrpTransmogrifier: {38.4k,564}<1,-1|1,-3>)
+  var NU = 564, NZ = [NU, NU], NO = [NU, 3 * NU];
+  function necFrame(q, bytes, lead) {
+    var t0 = q.t;
+    q.m(lead[0]); q.s(lead[1]);
+    for (var i = 0; i < 4; i++) q.pd(bytes[i] & 255, 8, true, NZ, NO);
+    q.m(NU); q.to(t0, 108000);
+  }
+  function nec(bytes, ditto, n) { // ditto: NEC1-style repeats; else full-frame repeats (Samsung32/NECx2)
+    var q = new Seq(), lead = ditto ? [16 * NU, 8 * NU] : [8 * NU, 8 * NU];
+    necFrame(q, bytes, lead);
+    for (var r = 0; r < n; r++) {
+      if (ditto) { var t0 = q.t; q.m(16 * NU); q.s(4 * NU); q.m(NU); q.to(t0, 108000); }
+      else necFrame(q, bytes, lead);
+    }
+    return q;
+  }
+
+  // ---- RC5 (IRP {36k,msb,889}<1,-1|-1,1>((1,~F:1:6,T:1,D:5,F:6,^114m)*)
+  function rc5(a, f, t, n) {
+    var q = new Seq(), U = 889;
+    for (var r = 0; r <= n; r++) {
+      var t0 = q.t;
+      q.m(U);
+      var bits = ((((f >>> 6) & 1) ^ 1) << 12) | ((t & 1) << 11) | ((a & 31) << 6) | (f & 63);
+      q.bp(bits, 13, U, [1, -1], [-1, 1]);
+      q.to(t0, 114000);
+    }
+    return q;
+  }
+  // ---- RC6 mode 0 (IRP {36k,444,msb}<-1,1|1,-1>((6,-2,1:1,0:3,<-2,2|2,-2>(T:1),D:8,F:8,^107m)*)
+  function rc6(a, f, t, n) {
+    var q = new Seq(), U = 444;
+    for (var r = 0; r <= n; r++) {
+      var t0 = q.t;
+      q.m(6 * U); q.s(2 * U);
+      q.bp(8, 4, U, [-1, 1], [1, -1]);             // start bit 1, mode 000
+      q.bp(t & 1, 1, U, [-2, 2], [2, -2]);         // toggle (double width)
+      q.bp(((a & 255) << 8) | (f & 255), 16, U, [-1, 1], [1, -1]);
+      q.to(t0, 107000);
+    }
+    return q;
+  }
+  // ---- Sony SIRC (IRP {40k,600}<1,-1|2,-1>(4,-1,F:7,D:n,^45m)*), 3 frames per press
+  function sirc(nb, a, c, n) {
+    var q = new Seq(), U = 600, data = (c & 127) | ((a & ((1 << (nb - 7)) - 1)) << 7);
+    for (var r = 0; r < 3 + n; r++) {
+      var t0 = q.t;
+      q.m(4 * U); q.s(U);
+      q.pd(data, nb, true, [U, U], [2 * U, U]);
+      q.to(t0, 45000);
+    }
+    return q;
+  }
+  // ---- Kaseikyo, Flipper layout (IRP Panasonic {37k,432}<1,-1|1,-3>(8,-4,...48 bits...,1,-173))
+  function kaseikyo(a, c, n) {
+    var vendor = (a >>> 8) & 0xffff, g1 = (a >>> 4) & 15, g2 = a & 15, id = (a >>> 24) & 3;
+    var b0 = vendor & 255, b1 = vendor >>> 8, par = b0 ^ b1;
+    par = (par ^ (par >>> 4)) & 15;
+    var b2 = par | (g1 << 4), b3 = g2 | ((c & 15) << 4), b4 = ((id << 6) | ((c >>> 4) & 63)) & 255;
+    var bytes = [b0, b1, b2, b3, b4, b2 ^ b3 ^ b4], q = new Seq(), U = 432;
+    for (var r = 0; r <= n; r++) {
+      q.m(8 * U); q.s(4 * U);
+      for (var i = 0; i < 6; i++) q.pd(bytes[i], 8, true, [U, U], [U, 3 * U]);
+      q.m(U); q.s(173 * U);
+    }
+    return q;
+  }
+  // ---- RCA, Flipper field order (== IRP RCA-38 msb with D=rev4(a), F=rev8(c)); 500us unit
+  function rca(a, c, n) {
+    var q = new Seq(), U = 500, Z = [U, 2 * U], O = [U, 4 * U];
+    for (var r = 0; r <= n; r++) {
+      q.m(8 * U); q.s(8 * U);
+      q.pd(a & 15, 4, true, Z, O); q.pd(c & 255, 8, true, Z, O);
+      q.pd(inv(a, 4), 4, true, Z, O); q.pd(inv(c, 8), 8, true, Z, O);
+      q.m(U); q.s(16 * U);
+    }
+    return q;
+  }
+  // ---- Sharp (IRP {38k,264}<1,-3|1,-7>(D:5,F:8,1:2,1,^67m,(D:5,~F:8,2:2,1,^67m,D:5,F:8,1:2,1,^67m)*))
+  function sharp(d, f, n) {
+    var q = new Seq(), U = 264, Z = [U, 3 * U], O = [U, 7 * U];
+    function fr(cmd, ext) { var t0 = q.t; q.pd(d & 31, 5, true, Z, O); q.pd(cmd & 255, 8, true, Z, O); q.pd(ext, 2, true, Z, O); q.m(U); q.to(t0, 67000); }
+    for (var r = 0; r <= n; r++) { fr(f, 1); fr(inv(f, 8), 2); }
+    return q;
+  }
+
+  // protocol -> [carrierHz, maxAddress, maxCommand, encoder(a, c, toggle, extraRepeats) -> Seq, usesToggle]
+  var P = {
+    NEC: [38400, 255, 255, function (a, c, t, n) { return nec([a, inv(a, 8), c, inv(c, 8)], true, n); }],
+    NECext: [38400, 65535, 65535, function (a, c, t, n) { return nec([a, a >>> 8, c, c >>> 8], true, n); }],
+    Samsung32: [38400, 255, 255, function (a, c, t, n) { return nec([a, a, c, inv(c, 8)], false, n); }],
+    RC5: [36000, 31, 63, function (a, c, t, n) { return rc5(a, c, t, n); }, 1],
+    RC5X: [36000, 31, 63, function (a, c, t, n) { return rc5(a, c + 64, t, n); }, 1],
+    RC6: [36000, 255, 255, function (a, c, t, n) { return rc6(a, c, t, n); }, 1],
+    SIRC: [40000, 31, 127, function (a, c, t, n) { return sirc(12, a, c, n); }],
+    SIRC15: [40000, 255, 127, function (a, c, t, n) { return sirc(15, a, c, n); }],
+    SIRC20: [40000, 8191, 127, function (a, c, t, n) { return sirc(20, a, c, n); }],
+    Kaseikyo: [37000, 0x3ffffff, 1023, function (a, c, t, n) { return kaseikyo(a, c, n); }],
+    RCA: [38000, 15, 255, function (a, c, t, n) { return rca(a, c, n); }],
+    RCA56: [56000, 15, 255, function (a, c, t, n) { return rca(a, c, n); }],
+    Sharp: [38000, 31, 255, function (a, c, t, n) { return sharp(a, c, n); }]
+  };
+  var autoToggle = 0;
+
+  function encode(protocol, address, command, opts) {
+    var p = P[protocol], o = opts || {};
+    if (!p) return null;
+    address = +address; command = +command;
+    if (!(address >= 0 && address <= p[1] && address % 1 === 0)) return null;
+    if (!(command >= 0 && command <= p[2] && command % 1 === 0)) return null;
+    var n = rep(o), q, t = o.toggle === 'auto' ? (p[4] ? (autoToggle ^= 1) ^ 1 : 0) : (o.toggle ? 1 : 0);
+    for (;;) { // shrink extra repeats until the transmit fits Android's 2 s limit
+      q = p[3](address, command, t, n);
+      var d = q.d;
+      while (d.length && d[d.length - 1] < 0) d.pop();  // pattern ends with a mark
+      var tot = 0, pat = [];
+      for (var i = 0; i < d.length; i++) { var v = Math.round(d[i] < 0 ? -d[i] : d[i]); pat.push(v); tot += v; }
+      if (tot <= MAX_TOTAL || n === 0) break;
+      n--;
+    }
+    var f = o.frequency ? Math.round(o.frequency) : p[0];
+    return { frequency: o.carriers ? snapCarrier(f, o.carriers) : f, pattern: pat };
+  }
+  function snapCarrier(hz, ranges) {
+    var best = hz, bd = -1;
+    for (var i = 0; ranges && i < ranges.length; i++) {
+      var r = ranges[i], lo = r.length ? r[0] : r.min, hi = r.length ? r[1] : r.max;
+      var v = hz < lo ? lo : (hz > hi ? hi : hz), d = v > hz ? v - hz : hz - v;
+      if (bd < 0 || d < bd) { bd = d; best = v; }
+    }
+    return best;
+  }
+
+  var KEYS = ['power', 'vol_up', 'vol_down', 'mute', 'input', 'up', 'down', 'left', 'right', 'ok', 'back',
+    'home', 'menu', 'play_pause', 'ch_up', 'ch_down', 'power_on', 'power_off'];
+
+  /*@@BRANDS@@*/
+  var BRANDS = [
+    { id: 'tcl', name: "TCL", sets: [
+      { id: 'tcl_gtv', label: "TCL Google TV / Android TV (RCA-type code, 38 kHz)", source: "Flipper-IRDB TCL/TCL_65C635K.ir", protocol: 'RCA', address: 0x0F,
+        keys: { power: 0x54, vol_up: 0xF4, vol_down: 0x74, mute: 0xFC, input: 0xC5, up: 0x9A, down: 0x1A, left: 0x6A,
+          right: 0xEA, ok: 0x2F, back: 0xE4, home: 0x10, menu: 0x37, ch_up: 0xB4, ch_down: 0x34 } },
+      { id: 'tcl_roku', label: "TCL Roku TV", source: "Flipper-IRDB TCL/TCL_50S423.ir", protocol: 'NECext', address: 0xC7EA,
+        keys: { power: 0xE817, vol_up: 0xF00F, vol_down: 0xEF10, mute: 0xDF20, up: 0xE619, down: 0xCC33, left: 0xE11E,
+          right: 0xD22D, ok: 0xD52A, back: 0x9966, home: 0xFC03, menu: 0x9E61, play_pause: 0xB34C } },
+      { id: 'tcl_rca56', label: "TCL power, 56 kHz carrier variant", source: "Flipper-IRDB TCL/TCL_65C635K.ir", protocol: 'RCA56', address: 0x0F,
+        keys: { power: 0x54 } }
+    ] },
+    { id: 'hisense', name: "Hisense", sets: [
+      { id: 'hisense_gtv', label: "Hisense Google TV / Android TV", source: "Flipper-IRDB Hisense/Hisense_55U6K.ir", protocol: 'NEC', address: 0x04,
+        keys: { power: 0x08, vol_up: 0x02, vol_down: 0x03, mute: 0x09, input: 0x0B, up: 0x56, down: 0x57, left: 0x58,
+          right: 0x59, ok: 0x5A, back: 0x04, home: 0x4A, menu: 0x43, play_pause: 0x6B, ch_up: 0x00, ch_down: 0x01 } },
+      { id: 'hisense_vidaa', label: "Hisense VIDAA / other Hisense smart TVs", source: "Flipper-IRDB Hisense/Hisense_32A4HAU.ir", protocol: 'NECext', address: 0xBF00,
+        keys: { power: 0xF20D, vol_up: 0xBB44, vol_down: 0xBC43, mute: 0xF10E, input: 0xED12, up: 0xE916, down: 0xE817,
+          left: 0xE619, right: 0xE718, ok: 0xEA15, back: 0xB748, home: 0xDF20, menu: 0xEB14, play_pause: 0x35CA,
+          ch_up: 0xB54A, ch_down: 0xB44B } },
+      { id: 'hisense_roku', label: "Hisense Roku TV (Roku TV code)", source: "Flipper-IRDB TCL/TCL_50S423.ir", protocol: 'NECext', address: 0xC7EA,
+        keys: { power: 0xE817 } },
+      { id: 'hisense_rc5', label: "Older Hisense (RC5)", source: "Flipper-IRDB RAW Hisense/Hisense_ER22601A.ir", protocol: 'RC5', address: 0x00,
+        keys: { power: 0x0C } }
+    ] },
+    { id: 'samsung', name: "Samsung", sets: [
+      { id: 'samsung', label: "Samsung TV", source: "Flipper-IRDB Samsung/Samsung_BN59-01301A.ir; play_pause: Flipper-IRDB Samsung/Samsung_BN59-01358C.ir; power_off: Flipper-IRDB Samsung/Samsung_QM55RA.ir", protocol: 'Samsung32', address: 0x07,
+        keys: { power: 0x02, vol_up: 0x07, vol_down: 0x0B, mute: 0x0F, input: 0x01, up: 0x60, down: 0x61, left: 0x65,
+          right: 0x62, ok: 0x68, back: 0x58, home: 0x79, menu: 0x1A, play_pause: 0xB9, ch_up: 0x12, ch_down: 0x10,
+          power_off: 0x98 } },
+      { id: 'samsung_smart', label: "Samsung Smart Remote power code (2016+)", source: "Flipper-IRDB Samsung/Samsung_BN59-01358C.ir", protocol: 'Samsung32', address: 0x07,
+        keys: { power: 0xE6 } }
+    ] },
+    { id: 'lg', name: "LG", sets: [
+      { id: 'lg', label: "LG TV (webOS and older)", source: "Flipper-IRDB LG/LG_AKB75855501.ir", protocol: 'NEC', address: 0x04,
+        keys: { power: 0x08, vol_up: 0x02, vol_down: 0x03, mute: 0x09, input: 0x0B, up: 0x40, down: 0x41, left: 0x07,
+          right: 0x06, ok: 0x44, back: 0x28, home: 0x7C, menu: 0x43, ch_up: 0x00, ch_down: 0x01 } }
+    ] },
+    { id: 'sony', name: "Sony", sets: [
+      { id: 'sony', label: "Sony Bravia", source: "Flipper-IRDB Sony/Sony_RMF-TX500U.ir; power_on/power_off: Flipper-IRDB Sony/Sony_XBR.ir", protocol: 'SIRC', address: 0x01,
+        keys: { power: 0x15, vol_up: 0x12, vol_down: 0x13, mute: 0x14, input: 0x25, up: 0x74, down: 0x75, left: 0x34,
+          right: 0x33, ok: 0x65, back: [0x97, 0x23, 'SIRC15'], home: 0x60, menu: [0xC4, 0x4B, 'SIRC15'], ch_up: 0x10,
+          ch_down: 0x11, power_on: 0x2E, power_off: 0x2F } }
+    ] },
+    { id: 'vizio', name: "Vizio", sets: [
+      { id: 'vizio', label: "Vizio SmartCast / Vizio TV", source: "Flipper-IRDB Vizio/Vizio_V705-G1.ir", protocol: 'NEC', address: 0x04,
+        keys: { power: 0x08, vol_up: 0x02, vol_down: 0x03, mute: 0x09, input: 0x2F, up: 0x45, down: 0x46, left: 0x47,
+          right: 0x48, ok: 0x44, back: 0x4A, home: 0x2D, menu: 0x4F, ch_up: 0x00, ch_down: 0x01 } }
+    ] },
+    { id: 'philips', name: "Philips", sets: [
+      { id: 'philips_rc6', label: "Philips (RC6; Android TV / Saphi, EU)", source: "Flipper-IRDB Philips/Philips_TV_48OLED806.ir", protocol: 'RC6', address: 0x00,
+        keys: { power: 0x0C, vol_up: 0x10, vol_down: 0x11, mute: 0x0D, input: 0x38, up: 0x58, down: 0x59, left: 0x5A,
+          right: 0x5B, ok: 0x5C, back: 0x0A, home: 0x54, menu: 0x57, ch_up: 0x20, ch_down: 0x21 } },
+      { id: 'philips_roku', label: "Philips Roku TV (US)", source: "Flipper-IRDB Philips/Philips_40PFL6533_F7D.ir", protocol: 'NECext', address: 0xC7EA,
+        keys: { power: 0xE817, vol_up: 0xF00F, vol_down: 0xEF10, mute: 0xDF20, up: 0xE619, down: 0xCC33, left: 0xE11E,
+          right: 0xD22D, ok: 0xD52A, back: 0x9966, home: 0xFC03, menu: 0x9E61, play_pause: 0xB34C } },
+      { id: 'philips_rc5', label: "Older Philips (RC5)", source: "Flipper-IRDB Philips/Philips_14GX8510.ir", protocol: 'RC5', address: 0x00,
+        keys: { power: 0x0C, vol_up: 0x10, vol_down: 0x11, mute: 0x0D, input: 0x38, ch_up: 0x20, ch_down: 0x21 } }
+    ] },
+    { id: 'panasonic', name: "Panasonic", sets: [
+      { id: 'panasonic', label: "Panasonic Viera", source: "Flipper-IRDB Panasonic/N2QAYB001109_full.ir", protocol: 'Kaseikyo', address: 0x00200280,
+        keys: { power: 0x03D0, vol_up: 0x0200, vol_down: 0x0210, mute: 0x0320, input: 0x50, up: [0x01200280, 0xA0],
+          down: [0x01200280, 0xB0], left: [0x01200280, 0xE0], right: [0x01200280, 0xF0], ok: [0x01200280, 0x90],
+          back: [0x03200280, 0x0140], home: [0x02200289, 0x0150], menu: [0x01200280, 0x0120], ch_up: 0x0340,
+          ch_down: 0x0350 } }
+    ] },
+    { id: 'sharp', name: "Sharp", sets: [
+      { id: 'sharp_aquos', label: "Sharp Aquos (Sharp protocol)", source: "Flipper-IRDB RAW Sharp/Sharp_LC-RC1-16.ir", protocol: 'Sharp', address: 0x01,
+        keys: { power: 0x16, vol_up: 0x14, vol_down: 0x15, mute: 0x17, input: 0x13, up: 0x57, down: 0x58, left: 0xF5,
+          right: 0xF6, ok: 0xF7, home: [0x11, 0x27], menu: 0x20, ch_up: 0x11, ch_down: 0x12 } },
+      { id: 'sharp_nec', label: "Sharp Aquos (newer EU models, NEC 7F00)", source: "Flipper-IRDB Sharp/Sharp_Aquos_32BG3E.ir", protocol: 'NECext', address: 0x7F00,
+        keys: { power: 0xF50A, vol_up: 0xE11E, vol_down: 0xA05F, mute: 0xAF50, input: 0xAC53, up: 0xA15E, down: 0xA956,
+          left: 0xA45B, right: 0xA758, ok: 0xA55A, menu: 0xA857, ch_up: 0xE01F, ch_down: 0xA35C } },
+      { id: 'sharp_roku', label: "Sharp Roku TV (Roku TV code)", source: "Flipper-IRDB TCL/TCL_50S423.ir", protocol: 'NECext', address: 0xC7EA,
+        keys: { power: 0xE817 } },
+      { id: 'sharp_roku_nec', label: "Sharp Roku TV (NEC 0x04 code as captured)", source: "Flipper-IRDB Sharp/Sharp_Roku_TV.ir", protocol: 'NEC', address: 0x04,
+        keys: { power: 0x08 } }
+    ] },
+    { id: 'toshiba', name: "Toshiba", sets: [
+      { id: 'toshiba_firetv', label: "Toshiba Fire TV Edition", source: "Flipper-IRDB Toshiba/toshiba_firetv_v2.ir; menu: Flipper-IRDB Toshiba/Toshiba_50C350LC.ir", protocol: 'NECext', address: 0x7D02,
+        keys: { power: 0xB946, vol_up: 0xF30C, vol_down: 0xE619, mute: 0xB34C, up: 0xB748, down: 0xB24D, left: 0xB14E,
+          right: 0xB649, ok: 0xB54A, back: 0xF20D, home: 0x609F, menu: 0xBA45, play_pause: 0xA45B, ch_up: 0xF00F,
+          ch_down: 0xA55A } },
+      { id: 'toshiba_nec', label: "Toshiba (classic, NEC 0x40)", source: "Flipper-IRDB Toshiba/Toshiba_CT-32F2.ir; input: Flipper-IRDB Toshiba/Toshiba_32AV502U.ir", protocol: 'NEC', address: 0x40,
+        keys: { power: 0x12, vol_up: 0x1A, vol_down: 0x1E, mute: 0x10, input: 0x0F, ch_up: 0x1B, ch_down: 0x1F } },
+      { id: 'toshiba_rc5', label: "Toshiba (RC5, EU)", source: "Flipper-IRDB Toshiba/Toshiba_Ct-8563.ir", protocol: 'RC5', address: 0x01,
+        keys: { power: 0x0C, vol_up: 0x10, vol_down: 0x11, mute: 0x0D, up: 0x14, down: 0x13, left: 0x15, right: 0x16,
+          ok: 0x35, back: 0x0A, home: 0x2E, menu: 0x30, ch_up: 0x20, ch_down: 0x21 } }
+    ] },
+    { id: 'insignia', name: "Insignia", sets: [
+      { id: 'insignia_firetv', label: "Insignia Fire TV Edition", source: "Flipper-IRDB Amazon/FireTV_Omni_Series_4K.ir; power: Flipper-IRDB Insignia/Insignia_NS_RCFNA_21.ir", protocol: 'NECext', address: 0x7D02,
+        keys: { power: 0xB946, vol_up: 0xF30C, vol_down: 0xE619, mute: 0xB34C, up: 0xB748, down: 0xB24D, left: 0xB14E,
+          right: 0xB649, ok: 0xB54A, back: 0xF20D, home: 0x609F, menu: 0xBA45, play_pause: 0xA45B, ch_up: 0xF00F,
+          ch_down: 0xA55A } },
+      { id: 'insignia', label: "Insignia (NS-RC remotes, NEC 0586)", source: "Flipper-IRDB Insignia/Insignia_NS_RC9DNA-14.ir", protocol: 'NECext', address: 0x0586,
+        keys: { power: 0xF00F, vol_up: 0xF30C, vol_down: 0xF20D, mute: 0xF10E, input: 0xE21D, up: 0xBD42, down: 0xBC43,
+          left: 0xE916, right: 0xEA15, ok: 0xE718, menu: 0xEB14, ch_up: 0xF50A, ch_down: 0xF40B } },
+      { id: 'insignia_roku', label: "Insignia Roku TV (Roku TV code)", source: "Flipper-IRDB TCL/TCL_50S423.ir", protocol: 'NECext', address: 0xC7EA,
+        keys: { power: 0xE817 } }
+    ] },
+    { id: 'roku', name: "Roku TV (TCL, Hisense, onn., Philips, Sharp, Insignia...)", sets: [
+      { id: 'roku_tv', label: "Roku TV", source: "Flipper-IRDB TCL/TCL_50S423.ir", protocol: 'NECext', address: 0xC7EA,
+        keys: { power: 0xE817, vol_up: 0xF00F, vol_down: 0xEF10, mute: 0xDF20, up: 0xE619, down: 0xCC33, left: 0xE11E,
+          right: 0xD22D, ok: 0xD52A, back: 0x9966, home: 0xFC03, menu: 0x9E61, play_pause: 0xB34C } }
+    ] }
+  ];
+  /*@@END_BRANDS@@*/
+
+  function findSet(brandId, setId) {
+    for (var i = 0; i < BRANDS.length; i++) {
+      if (BRANDS[i].id !== brandId) continue;
+      var s = BRANDS[i].sets;
+      for (var j = 0; j < s.length; j++) if (s[j].id === setId) return s[j];
+    }
+    return null;
+  }
+  function resolve(brandId, setId, key) {
+    var s = findSet(brandId, setId), v = s && s.keys.hasOwnProperty(key) ? s.keys[key] : null;
+    if (v === null) return null;
+    if (typeof v === 'number') return { protocol: s.protocol, address: s.address, command: v };
+    return { protocol: v[2] || s.protocol, address: v[0], command: v[1] };
+  }
+  function keyPattern(brandId, setId, key, opts) {
+    var r = resolve(brandId, setId, key);
+    return r ? encode(r.protocol, r.address, r.command, opts) : null;
+  }
+  function powerCandidates(brandId) {
+    var out = [];
+    for (var i = 0; i < BRANDS.length; i++) {
+      if (brandId && BRANDS[i].id !== brandId) continue;
+      for (var j = 0; j < BRANDS[i].sets.length; j++) {
+        var s = BRANDS[i].sets[j];
+        if (s.keys.hasOwnProperty('power')) out.push({ brand: BRANDS[i].id, set: s.id, label: s.label });
+      }
+    }
+    return out;
+  }
+  var PROTOCOLS = [];
+  for (var k in P) if (P.hasOwnProperty(k)) PROTOCOLS.push(k);
+
+  return { encode: encode, keyPattern: keyPattern, resolve: resolve, powerCandidates: powerCandidates, snapCarrier: snapCarrier,
+    BRANDS: BRANDS, KEYS: KEYS, PROTOCOLS: PROTOCOLS, MAX_TOTAL_US: MAX_TOTAL };
+})();
+/* END HelmIR */
+</script>
+<script>
 const API = 'http://localhost:5001';
-let currentIp = localStorage.getItem('lastIp') || '';
+let currentIp = '';
 let currentDeviceType = localStorage.getItem('deviceType') || 'unknown';
+let currentName = '';
 let savedDevices = JSON.parse(localStorage.getItem('savedDevices') || '[]');
-let bloatStates = JSON.parse(localStorage.getItem('bloatStates') || '{}');
 let installedPackages = [];
 
+/*! Icons: Lucide (lucide.dev), except 'remote' and 'play-pause', which are Helm's own.
+ *
+ * ISC License. Copyright (c) 2026 Lucide Icons and Contributors.
+ * Permission to use, copy, modify, and/or distribute this software for any purpose with or without
+ * fee is hereby granted, provided that the above copyright notice and this permission notice appear
+ * in all copies. THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD
+ * TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL
+ * THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
+ * Some of these Lucide icons derive from Feather: MIT License, Copyright (c) 2013-present Cole Bemis.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ * associated documentation files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge, publish, distribute,
+ * sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions: The above copyright notice and this
+ * permission notice shall be included in all copies or substantial portions of the Software.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+ * NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
+const ICONS = {
+  tv: '<path d="m17 2-5 5-5-5"/><rect width="20" height="15" x="2" y="7" rx="2"/>',
+  radio: '<path d="M16.247 7.761a6 6 0 0 1 0 8.478"/><path d="M19.075 4.933a10 10 0 0 1 0 14.134"/><path d="M4.925 19.067a10 10 0 0 1 0-14.134"/><path d="M7.753 16.239a6 6 0 0 1 0-8.478"/><circle cx="12" cy="12" r="2"/>',
+  "shopping-bag": '<path d="M16 10a4 4 0 0 1-8 0"/><path d="M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/>',
+  "layout-grid": '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+  sparkles: '<path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/>',
+  "book-open": '<path d="M12 5v16"/><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"/>',
+  power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>',
+  "log-in": '<path d="m10 17 5-5-5-5"/><path d="M15 12H3"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>',
+  "volume-x": '<path d="M11 4.702a.7.7 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.7.7 0 0 0 11 19.298z"/><path d="m16.5 14.5 5-5"/><path d="m16.5 9.5 5 5"/>',
+  "volume-2": '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/>',
+  "chevron-up": '<path d="m18 15-6-6-6 6"/>',
+  "chevron-down": '<path d="m6 9 6 6 6-6"/>',
+  "chevron-left": '<path d="m15 18-6-6 6-6"/>',
+  "chevron-right": '<path d="m9 18 6-6-6-6"/>',
+  "undo-2": '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>',
+  house: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  settings: '<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  minus: '<path d="M5 12h14"/>',
+  rewind: '<path d="M12 6a2 2 0 0 0-3.414-1.414l-6 6a2 2 0 0 0 0 2.828l6 6A2 2 0 0 0 12 18z"/><path d="M22 6a2 2 0 0 0-3.414-1.414l-6 6a2 2 0 0 0 0 2.828l6 6A2 2 0 0 0 22 18z"/>',
+  "fast-forward": '<path d="M12 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 12 18z"/><path d="M2 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 2 18z"/>',
+  keyboard: '<path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/>',
+  delete: '<path d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><path d="m12 9 6 6"/><path d="m18 9-6 6"/>',
+  "corner-down-left": '<path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/>',
+  radar: '<path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/>',
+  "scan-search": '<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16-1.9-1.9"/>',
+  "log-out": '<path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>',
+  "rotate-cw": '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+  "refresh-cw": '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  "circle-check": '<circle cx="12" cy="12" r="10"/><path d="m16 9-5.5 5.5L8 12"/>',
+  "circle-alert": '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  "arrow-left": '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  "arrow-right": '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  download: '<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>',
+  wifi: '<path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/>',
+  compass: '<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/>',
+  "circle-play": '<path d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"/><circle cx="12" cy="12" r="10"/>',
+  flame: '<path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/>',
+  zap: '<path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"/>',
+  scale: '<path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M7 21h10"/>',
+  bug: '<path d="M12 20v-9"/><path d="M14 7a4 4 0 0 1 4 4v3a6 6 0 0 1-12 0v-3a4 4 0 0 1 4-4z"/><path d="M14.12 3.88 16 2"/><path d="M21 21a4 4 0 0 0-3.81-4"/><path d="M21 5a4 4 0 0 1-3.55 3.97"/><path d="M22 13h-4"/><path d="M3 21a4 4 0 0 1 3.81-4"/><path d="M3 5a4 4 0 0 0 3.55 3.97"/><path d="M6 13H2"/><path d="m8 2 1.88 1.88"/><path d="M9 7.13V6a3 3 0 1 1 6 0v1.13"/>',
+  trophy: '<path d="M10 14.66V17a1 1 0 0 1-1 1 2 2 0 0 0-2 2v2"/><path d="M14 14.66V17a1 1 0 0 0 1 1 2 2 0 0 1 2 2v2"/><path d="M17.916 10H19.5A2.5 2.5 0 0 0 22 7.5V5a1 1 0 0 0-1-1h-3"/><path d="M4 22h16"/><path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"/><path d="M6.084 10H4.5A2.5 2.5 0 0 1 2 7.5V5a1 1 0 0 1 1-1h3"/>',
+  umbrella: '<path d="M12 13v7a2 2 0 0 0 4 0"/><path d="M12 2v2"/><path d="M20.992 13a1 1 0 0 0 .97-1.274 10.284 10.284 0 0 0-19.923 0A1 1 0 0 0 3 13z"/>',
+  clapperboard: '<path d="m12.296 3.464 3.02 3.956"/><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="m6.18 5.276 3.1 3.899"/>',
+  "loader-circle": '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
+  search: '<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>',
+  "trash-2": '<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  remote: '<rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="8" r="2"/><path d="M12 14h.01M12 17.5h.01"/>',
+  "play-pause": '<path d="M4 5v14l8-7z"/><path d="M16 5v14M20 5v14"/>'
+};
+function icon(name, cls) {
+  return `<svg class="i${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+}
+// Static markup uses <i data-icon="name">; swap in the SVGs.
+function hydrateIcons(root) {
+  [].slice.call((root || document).querySelectorAll('i[data-icon]')).forEach(el => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = icon(el.getAttribute('data-icon'));
+    el.parentNode.replaceChild(tmp.firstChild, el);
+  });
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+// Coloured monogram tiles stand in for app icons.
+const TILE_COLORS = ['#5B8CFF', '#8B5CF6', '#EC4899', '#F97316', '#14B8A6', '#22C55E', '#EAB308', '#06B6D4', '#EF4444', '#6366F1'];
+function monogram(name) {
+  const n = String(name || '?').trim();
+  if (/^[A-Z0-9+]{2,4}$/.test(n)) return n;
+  const parts = n.replace(/([a-z])([A-Z])/g, '$1 $2').split(/[\s._-]+/).filter(Boolean);
+  return (parts.length > 1 ? parts[0][0] + parts[1][0] : n[0]).toUpperCase();
+}
+function hashColor(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return TILE_COLORS[h % TILE_COLORS.length];
+}
+function isLight(hex) {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
+  if (!m) return false;
+  const [r, g, b] = [m[1], m[2], m[3]].map(x => parseInt(x, 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.62;
+}
+// rgba() rather than #RRGGBBAA: 8-digit hex needs Chrome 62.
+function rgba(hex, a) {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
+  return m ? `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${a})` : hex;
+}
+function tile(name, color, small) {
+  const c = color || hashColor(name);
+  return `<div class="tile${small ? ' sm' : ''}${isLight(c) ? ' dark' : ''}" style="background-color:${c}">${esc(monogram(name))}</div>`;
+}
+
 const THEMES = {
-  firetv:   { primary: '#FF6B35', bg: '#FF6B3515', dim: '#FF6B3544', icon: '🔥', label: 'Fire TV' },
-  googletv: { primary: '#4285F4', bg: '#4285F415', dim: '#4285F444', icon: '📺', label: 'Google TV' },
-  roku:     { primary: '#6C2DC7', bg: '#6C2DC715', dim: '#6C2DC744', icon: '📡', label: 'Roku' },
-  unknown:  { primary: '#2E86FF', bg: '#2E86FF15', dim: '#2E86FF44', icon: '⎋',  label: 'Device' },
+  firetv:   { primary: '#FF7A45', icon: 'flame', label: 'Fire TV' },
+  googletv: { primary: '#4C8DFF', icon: 'tv',    label: 'Google TV' },
+  roku:     { primary: '#8B5CF6', icon: 'tv',    label: 'Roku' },
+  unknown:  { primary: '#5B8CFF', icon: 'tv',    label: 'Device' },
 };
 
 const DEVICE_NAMES = {
@@ -185,35 +1067,51 @@ const DEVICE_NAMES = {
 
 const STORE = [
   // Utility
-  { name: 'Downloader', pkg: 'com.esaba.downloader', desc: 'Browse and sideload APKs on your TV — required for Fire TV', icon: '⬇️', category: 'Utility',
+  { name: 'Downloader', pkg: 'com.esaba.downloader', desc: 'Browse and sideload APKs on your TV — required for Fire TV', color: '#F68B1F', category: 'Utility',
     playstore: true },
-  { name: 'Button Mapper', pkg: 'flar2.homebutton', desc: 'Remap your TV remote buttons', icon: '🎮', category: 'Utility', playstore: true },
+  { name: 'Button Mapper', pkg: 'flar2.homebutton', desc: 'Remap your TV remote buttons', color: '#1E88E5', category: 'Utility', playstore: true },
+  { name: 'TV Bro', pkg: 'com.phlox.tvwebbrowser', desc: 'Web browser built for TV remotes', color: '#5FACFF', category: 'Utility',
+    url: 'https://github.com/truefedex/tv-bro/releases/download/v2.1.6/tvbro-2.1.6-generic-geckoExcluded.apk' },
+  { name: 'LocalSend', pkg: 'org.localsend.localsend_app', desc: 'Send photos and files from your phone to the TV over Wi‑Fi', color: '#008080', category: 'Utility',
+    url: 'https://github.com/localsend/localsend/releases/download/v1.18.2/LocalSend-1.18.2-android-arm64v8.apk',
+    url_v7a: 'https://github.com/localsend/localsend/releases/download/v1.18.2/LocalSend-1.18.2-android-arm32v7.apk' },
+  { name: 'Aerial Views', pkg: 'com.neilturner.aerialviews', desc: 'Apple TV-style 4K aerial screensaver', color: '#B9A090', category: 'Utility',
+    url: 'https://github.com/theothernt/AerialViews/releases/download/1.8.4/aerial-views-1.8.4.apk',
+    // Google TV hides third-party screensavers from Settings; this is the
+    // developer's documented way to choose it.
+    after: { label: 'Set as screensaver', done: 'Aerial Views is now your screensaver',
+             command: 'shell settings put secure screensaver_components com.neilturner.aerialviews/.ui.screensaver.DreamActivity' } },
   // Media Players
-  { name: 'Kodi', pkg: 'org.xbmc.kodi', desc: 'Ultimate media center with addons', icon: '🎬', category: 'Media Players',
+  { name: 'Kodi', pkg: 'org.xbmc.kodi', desc: 'Ultimate media center with addons', color: '#17B2E7', category: 'Media Players',
     url: 'https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.3-Omega-arm64-v8a.apk',
     url_v7a: 'https://mirrors.kodi.tv/releases/android/arm/kodi-21.3-Omega-armeabi-v7a.apk' },
-  { name: 'Jellyfin', pkg: 'org.jellyfin.androidtv', desc: 'Stream your personal media library', icon: '🪼', category: 'Media Players',
+  { name: 'Jellyfin', pkg: 'org.jellyfin.androidtv', desc: 'Stream your personal media library', color: '#AA5CC3', category: 'Media Players',
     url: 'https://github.com/jellyfin/jellyfin-androidtv/releases/download/v0.19.10/jellyfin-androidtv-v0.19.10-release.apk' },
-  { name: 'VLC', pkg: 'org.videolan.vlc', desc: 'Universal video player', icon: '🔺', category: 'Media Players',
+  { name: 'VLC', pkg: 'org.videolan.vlc', desc: 'Universal video player', color: '#FF8800', category: 'Media Players',
     url: 'https://mirror.clarkson.edu/videolan/vlc-android/3.7.1/VLC-Android-3.7.1-arm64-v8a.apk',
     url_v7a: 'https://mirror.clarkson.edu/videolan/vlc-android/3.7.1/VLC-Android-3.7.1-armeabi-v7a.apk' },
+  { name: 'Just Player', pkg: 'com.brouken.player', desc: 'Lightweight player that handles almost any file', color: '#3DDC84', category: 'Media Players',
+    url: 'https://github.com/moneytoo/Player/releases/download/v0.217/Just.Player.v0.217.apk' },
   // Streaming
-  { name: 'Stremio', pkg: 'com.stremio.one', desc: 'Stream movies and TV — easiest setup', icon: '🌀', category: 'Streaming',
+  { name: 'Stremio', pkg: 'com.stremio.one', desc: 'Stream movies and TV — easiest setup', color: '#7B5BF5', category: 'Streaming',
     playstore: true },
   // YouTube
-  { name: 'SmartTube', pkg: 'org.smarttube.stable', desc: 'YouTube without ads', icon: '▶️', category: 'YouTube',
+  { name: 'SmartTube', pkg: 'org.smarttube.stable', desc: 'YouTube without ads', color: '#E52D27', category: 'YouTube',
     url: 'https://github.com/yuliskov/SmartTube/releases/download/32.56s/SmartTube_stable_32.56_arm64-v8a.apk',
     url_v7a: 'https://github.com/yuliskov/SmartTube/releases/download/32.56s/SmartTube_stable_32.56_armeabi-v7a.apk' },
-  { name: 'NewPipe', pkg: 'org.schabi.newpipe', desc: 'Lightweight YouTube client', icon: '🟢', category: 'YouTube',
+  { name: 'NewPipe', pkg: 'org.schabi.newpipe', desc: 'Lightweight YouTube client', color: '#CD201F', category: 'YouTube',
     url: 'https://github.com/TeamNewPipe/NewPipe/releases/download/v0.29.1/NewPipe_v0.29.1.apk' },
-  { name: 'Projectivy', pkg: 'com.spocky.projengmenu', desc: 'Best Fire TV launcher', icon: '🚀', category: 'Launchers',
+  // Launchers
+  { name: 'Projectivy', pkg: 'com.spocky.projengmenu', desc: 'Clean, customizable home screen', color: '#E78940', category: 'Launchers',
     url: 'https://github.com/spocky/miproja1/releases/download/4.71/ProjectivyLauncher-4.71-c95-xda-release.apk' },
-  { name: 'Wolf Launcher', pkg: 'com.wolf.firelauncher', desc: 'Clean customizable Fire TV launcher', icon: '🐺', category: 'Launchers',
-    url: 'https://github.com/daboynb/Root_firestick/raw/main/wolf_launcher.apk' },
-  // Emulation
-  { name: 'RetroArch', pkg: 'com.retroarch.ra32', desc: 'Multi-system emulator', icon: '🕹️', category: 'Emulation',
+  // Games
+  { name: 'Moonlight', pkg: 'com.limelight', desc: 'Stream games from your PC to the TV', color: '#565C64', category: 'Games',
+    url: 'https://github.com/moonlight-stream/moonlight-android/releases/download/v12.2/app-nonRoot-release.apk' },
+  { name: 'Lemuroid', pkg: 'com.swordfish.lemuroid', desc: 'Retro games, no setup: NES, SNES, GBA, PS1 and more', color: '#00C64E', category: 'Games',
+    url: 'https://github.com/Swordfish90/Lemuroid/releases/download/1.17.0/lemuroid-app-free-dynamic-release.apk' },
+  { name: 'RetroArch', pkg: 'com.retroarch.ra32', desc: 'Multi-system emulator', color: '#343947', category: 'Games',
     url: 'https://buildbot.libretro.com/stable/1.22.2/android/RetroArch_ra32.apk' },
-  { name: 'PPSSPP', pkg: 'org.ppsspp.ppsspp', desc: 'PlayStation Portable emulator', icon: '🎮', category: 'Emulation',
+  { name: 'PPSSPP', pkg: 'org.ppsspp.ppsspp', desc: 'PlayStation Portable emulator', color: '#2D4553', category: 'Games',
     url: 'https://www.ppsspp.org/files/1_17_1/ppsspp.apk' },
 ];
 
@@ -242,13 +1140,13 @@ const GOOGLETV_BLOAT = [
 ];
 
 const GUIDES = [
-  { id: 'whatiskodi', section: 'stremio', title: 'Start Here: What\'s the Plan?', icon: '🧭', color: '#2980b9', desc: '2 minute overview — pick your path', steps: [
+  { id: 'whatiskodi', section: 'stremio', title: 'Start Here: What\'s the Plan?', icon: 'compass', color: '#2980b9', desc: '2 minute overview — pick your path', steps: [
     { title: 'Two ways to stream — pick based on what you watch', body: 'This app can set up two different systems: Stremio (simple, looks like Netflix) or Kodi (more setup, but the only good option for live sports). Most people should start with Stremio below. If live sports are your main reason for being here, skip ahead to the Kodi section.' },
     { title: 'Why not just use Stremio for everything?', body: 'Stremio is great for movies and TV, but its live sports coverage is limited and less reliable than Kodi. If you want NFL, NBA, MLB, NHL, UFC, Boxing or Soccer, Kodi with The Crew addon is genuinely the better tool for that specific job.' },
     { title: 'What is Kodi, if you choose that path?', body: 'Kodi is a free, open source media player. By itself it just plays files — the power comes from addons, which work like apps inside Kodi that find content for you. The Crew and Umbrella are the two addons used in the guides below.' },
     { title: 'What you will set up either way', body: 'Both paths work best with a Debrid service ($3-4/month) — a service that gives you instant, buffer-free streams. Whichever path you choose, getting a Debrid service is one of the first steps.' },
   ]},
-  { id: 'stremio', section: 'stremio', title: 'Get Started with Stremio', icon: '🌀', color: '#2980b9', desc: 'Easiest setup for movies + TV — but not for live sports', steps: [
+  { id: 'stremio', section: 'stremio', title: 'Get Started with Stremio', icon: 'circle-play', color: '#2980b9', desc: 'Easiest setup for movies + TV — but not for live sports', steps: [
     { title: 'Why start with Stremio?', body: 'If you want the simplest possible setup, start here instead of Kodi. Stremio looks and works just like Netflix, takes about 10 minutes total, and addons sync automatically to your account — no repos, no zip files, no File Manager. This is the best option for most normal people.' },
     { title: 'Step 1: Install Stremio on your TV', body: 'Open the Store tab in Helm and tap Install on Stremio. On Google TV or Android TV this opens the Play Store directly to Stremio — tap Install there. On Fire TV, Stremio is not available this way (it is not in the Amazon Appstore) — see the "Fire TV Owners: Read This First" guide for a quick 5-minute workaround using the Downloader app.' },
     { title: 'Step 2: Create a free account', body: 'Open Stremio on your TV and create a free account, or sign in with Google or Facebook. This account is what makes your addons sync automatically across your phone, TV, and computer.' },
@@ -259,7 +1157,7 @@ const GUIDES = [
     { title: 'Watch anything', body: 'Search for any movie or TV show on your TV. If you have a debrid service connected, pick the source marked with a cloud icon for instant 4K with no buffering. Without a debrid service, pick sources with the most seeders for the fastest start.' },
     { title: 'Troubleshooting', body: 'No streams showing? Make sure you are signed into the same account on your phone (where you installed Torrentio) and your TV. Slow streams? Double check your debrid API key was entered correctly on the Torrentio configuration page — RD/TorBox keys occasionally need to be re-entered if a stream stops working.' },
   ]},
-  { id: 'firetv-sideload', section: 'stremio', title: 'Fire TV Owners: Read This First', icon: '🔥', color: '#d35400', desc: 'Stremio is not in the Amazon Appstore — here is how to get it anyway', steps: [
+  { id: 'firetv-sideload', section: 'stremio', title: 'Fire TV Owners: Read This First', icon: 'flame', color: '#d35400', desc: 'Stremio is not in the Amazon Appstore — here is how to get it anyway', steps: [
     { title: 'Why Fire TV is different', body: 'Amazon Fire TV does not have the Google Play Store, and Stremio was removed from the Amazon Appstore. The good news: Amazon Fire TV does have its own app store, and a free tool called Downloader (made by AFTVnews) lets you grab and install any app directly on your Fire TV in a few minutes.' },
     { title: 'Step 1: Install Downloader', body: 'On your Fire TV remote, press the Home button, then go to Find (magnifying glass) → Search and type Downloader. Select the orange Downloader app by AFTVnews and click Get/Download. You can also try installing it from the Store tab in Helm.' },
     { title: 'Step 2: Allow installs from unknown sources', body: 'Go to Settings → My Fire TV → Developer Options (if you do not see Developer Options, go to Settings → My Fire TV → About and click your Fire TV name 7 times to unlock it). Turn on Apps from Unknown Sources, then turn on the same setting specifically for the Downloader app when prompted.' },
@@ -268,7 +1166,7 @@ const GUIDES = [
     { title: 'Step 5: Install', body: 'When the download finishes, Downloader will ask if you want to install the app. Select Install, wait a few seconds, then select Open. Stremio is now on your Fire TV — sign in with the same account you use elsewhere so your addons sync automatically.' },
     { title: 'This same trick works for other apps too', body: 'Any app not available through Helm\'s one-click Store install can usually be sideloaded this same way on Fire TV: open Downloader, type the app\'s official website, and download the Android APK from there.' },
   ]},
-  { id: 'realdebrid', section: 'kodi', title: 'Kodi Step 1: Get a Debrid Service', icon: '⚡', color: '#e67e22', desc: 'Required before any Kodi addon', steps: [
+  { id: 'realdebrid', section: 'kodi', title: 'Kodi Step 1: Get a Debrid Service', icon: 'zap', color: '#e67e22', desc: 'Required before any Kodi addon', steps: [
     { title: 'What is a Debrid Service?', body: 'A debrid service downloads torrents on super fast servers and lets you stream instantly in 4K with no buffering. Think of it as having every movie, TV show, and sport ever made for about $3/month. Real Debrid and TorBox are the two best options — see the Debrid Comparison guide for which one fits you.' },
     { title: 'How much does it cost?', body: 'Real Debrid: about $4 for 30 days or $17-18 for 180 days (~$3/month). TorBox: plans start around $3/month with a permanent free tier to test first. Compare either to Netflix at $15-23/month — both give you more content for less.' },
     { title: 'Heads up — Real Debrid filter (May 2026)', body: 'Since May 2026 Real Debrid blocks cached files with tags like WEB-DL, WEBRip, AMZN and YTS in the filename for legal compliance reasons. This means some streams that used to work now fail with a copyright error. TorBox does not have this filter yet, so many users now run TorBox as their main service and keep Real Debrid as a backup.' },
@@ -277,14 +1175,14 @@ const GUIDES = [
     { title: 'Connect to Umbrella', body: 'Open Umbrella → Tools → Settings → Accounts → Real Debrid → Authorize. Enter the code at real-debrid.com/device on your phone.' },
     { title: 'What to look for', body: 'Always pick sources marked RD or highlighted in green — these stream instantly in 4K with zero buffering. Avoid sources without RD.' },
   ]},
-  { id: 'debridcompare', section: 'kodi', title: 'Optional: Which Debrid Should I Pick?', icon: '⚖️', color: '#c0392b', desc: 'Real Debrid vs TorBox vs AllDebrid vs Premiumize', steps: [
+  { id: 'debridcompare', section: 'kodi', title: 'Optional: Which Debrid Should I Pick?', icon: 'scale', color: '#c0392b', desc: 'Real Debrid vs TorBox vs AllDebrid vs Premiumize', steps: [
     { title: 'Real Debrid', body: 'The original and still the largest cached library, especially for older or niche titles. Downside: since May 2026 it blocks cached files with tags like WEB-DL, WEBRip, AMZN and YTS in the filename, so some streams now fail with a copyright error. Best as your primary if you mainly watch popular content, or as a backup to TorBox. About $3-4/month.' },
     { title: 'TorBox — the 2026 favorite', body: 'The most recommended alternative in 2026. No filter like Real Debrid, supports multiple IPs/devices at once (great for using on your phone and TV at the same time or sharing with family), and has a permanent free tier so you can test it before paying. Plans start around $3/month for the Essential tier. Many users now run TorBox as their main service.' },
     { title: 'AllDebrid', body: 'A solid budget-friendly secondary option. Offers a 7-day free trial (full premium access) which is great for testing 4K streaming before committing. Supports 70+ file hosts. Downside: ties your account to one home IP address, so using it on mobile data away from home can get your account flagged.' },
     { title: 'Premiumize', body: 'The most expensive option but adds extras beyond streaming: up to 1000GB of cloud storage, built-in VPN, and Usenet support. Worth it if you want an all-in-one toolbox, not just stream resolving. Overkill for most people who just want Kodi or Stremio to work.' },
     { title: 'Our recommendation', body: 'Start with TorBox as your primary — it is cheap, has a free tier to test, and avoids the Real Debrid filter issue. If you find content TorBox has not cached yet, add Real Debrid as a backup. Both The Crew and Umbrella support connecting multiple debrid accounts at once in their Accounts settings.' },
   ]},
-  { id: 'cocoscrapers', section: 'kodi', title: 'Kodi Step 2: Install CocoScrapers', icon: '🕷️', color: '#16a085', desc: 'Required stream finder — works with both addons below', steps: [
+  { id: 'cocoscrapers', section: 'kodi', title: 'Kodi Step 2: Install CocoScrapers', icon: 'bug', color: '#16a085', desc: 'Required stream finder — works with both addons below', steps: [
     { title: 'What is CocoScrapers?', body: 'CocoScrapers finds streams for Kodi addons. Both The Crew and Umbrella need it to find the most streams. Install it once and it works with everything.' },
     { title: 'Enable Unknown Sources', body: 'Open Kodi → Settings (gear icon) → System → Add-ons → turn on Unknown Sources. Click Yes on the warning. You only need to do this once.' },
     { title: 'Add CocoScrapers Source', body: 'Go to Settings → File Manager → Add Source. Click None and type: https://cocojoe2411.github.io — name it coco and click OK.' },
@@ -292,7 +1190,7 @@ const GUIDES = [
     { title: 'Install CocoScrapers Addon', body: 'Go to Install from repository → CocoScrapers Repository → Program add-ons → CocoScrapers → Install.' },
     { title: 'Done', body: 'CocoScrapers is installed. When you install The Crew or Umbrella they will automatically use it. You do not need to do anything else.' },
   ]},
-  { id: 'thecrew', section: 'kodi', title: 'Kodi Step 3: Install The Crew (Live Sports)', icon: '🏆', color: '#27ae60', desc: 'This is how you get live sports — NFL, NBA, UFC and more', steps: [
+  { id: 'thecrew', section: 'kodi', title: 'Kodi Step 3: Install The Crew (Live Sports)', icon: 'trophy', color: '#27ae60', desc: 'This is how you get live sports — NFL, NBA, UFC and more', steps: [
     { title: 'What is The Crew?', body: 'The Crew is the most popular all-in-one Kodi addon with movies, TV shows, live TV, and a massive Sports section — NFL, NBA, MLB, NHL, UFC, Boxing, Soccer, Formula 1 and more. Install CocoScrapers and Real Debrid first.' },
     { title: 'Add The Crew Repository', body: 'Go to Settings → File Manager → Add Source. Click None and type: https://team-crew.github.io — name it team-crew and click OK.' },
     { title: 'Install The Crew Repository', body: 'Go to Settings → Add-ons → Install from zip file → select team-crew → install the repository zip. Wait for the Repository installed notification.' },
@@ -301,7 +1199,7 @@ const GUIDES = [
     { title: 'Connect Real Debrid', body: 'Open The Crew → Tools → Accounts → Real Debrid → Authorize. Enter the code at real-debrid.com/device on your phone.' },
     { title: 'Watch Sports', body: 'Open The Crew → Sports. Find NFL, NBA, MLB, NHL, UFC, Boxing, Soccer, F1 and more. For live games look in Sports → Live. Always pick an RD source for instant 4K.' },
   ]},
-  { id: 'umbrella', section: 'kodi', title: 'Kodi Step 4: Install Umbrella (Movies + TV)', icon: '☂️', color: '#8e44ad', desc: 'Best Kodi addon for movies and TV shows', steps: [
+  { id: 'umbrella', section: 'kodi', title: 'Kodi Step 4: Install Umbrella (Movies + TV)', icon: 'umbrella', color: '#8e44ad', desc: 'Best Kodi addon for movies and TV shows', steps: [
     { title: 'What is Umbrella?', body: 'Umbrella is the best Kodi addon for movies and TV. It has the highest quality streams and best Real Debrid integration. Install CocoScrapers and Real Debrid before this.' },
     { title: 'Add Umbrella Repository', body: 'Go to Settings → File Manager → Add Source. Click None and type: https://umbrellaplug.github.io — name it umbrella and click OK.' },
     { title: 'Install Umbrella Repository', body: 'Go to Settings → Add-ons → Install from zip file → select umbrella → install the repository zip. Wait for the Repository installed notification.' },
@@ -310,34 +1208,66 @@ const GUIDES = [
     { title: 'Connect Real Debrid', body: 'Open Umbrella → Tools → Settings → Accounts → Real Debrid → Authorize. Enter the code at real-debrid.com/device on your phone.' },
     { title: 'Start streaming', body: 'Browse movies and TV in Umbrella. Always pick RD sources (green) for instant 4K. If you see No Streams make sure CocoScrapers is enabled and Real Debrid is authorized.' },
   ]},
-]
+];
 
 function applyTheme(type) {
   const t = THEMES[type] || THEMES.unknown;
   document.documentElement.style.setProperty('--primary', t.primary);
-  document.documentElement.style.setProperty('--primary-bg', t.bg);
-  document.documentElement.style.setProperty('--primary-dim', t.dim);
+  document.documentElement.style.setProperty('--primary-bg', rgba(t.primary, 0.12));
+  document.documentElement.style.setProperty('--primary-dim', rgba(t.primary, 0.36));
 }
 
-function toast(msg, type='info') {
+let toastTimer = null;
+function toast(msg, type = 'info') {
   const t = document.getElementById('toast');
-  t.textContent = msg;
+  const ic = type === 'success' ? 'circle-check' : type === 'error' ? 'circle-alert' : 'info';
+  t.innerHTML = icon(ic) + '<span>' + esc(msg) + '</span>';
   t.className = `toast show ${type}`;
-  setTimeout(() => t.className = 'toast', 3000);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, type === 'error' ? 5000 : 3000);
 }
 
-function showPage(page, e) {
+function setStatus(state, text) {
+  document.body.className = document.body.className.replace(/\bconn-\w+/g, '').trim() + ' conn-' + state;
+  document.querySelectorAll('.conn-text').forEach(el => { el.textContent = text; });
+}
+
+function showPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if (b.getAttribute('data-page') === page) b.classList.add('active'); else b.classList.remove('active');
+  });
   document.getElementById('page-' + page).classList.add('active');
-  if (e && e.currentTarget) e.currentTarget.classList.add('active');
-  if (page === 'apps' && currentIp) loadApps();
+  window.scrollTo(0, 0);
+  if (page === 'apps') loadApps();
   if (page === 'bloatware') renderBloat();
   if (page === 'store') {
-    document.getElementById('store-list').innerHTML = '<div class="loading">Checking installed apps...</div>';
+    document.getElementById('store-list').innerHTML = `<div class="loading" style="width:100%">${icon('loader-circle', 'spin')}</div>`;
     loadInstalledPackages().then(() => renderStore());
   }
   if (page === 'guides') renderGuides();
+  if (page === 'remote') renderRemote();
+}
+
+// ---- in-app dialogs (native confirm() looks out of place, esp. on Android) ----
+let dialogResolve = null;
+function askConfirm(title, body, okLabel, danger) {
+  document.getElementById('dialog-content').innerHTML = `
+    <h2>${esc(title)}</h2>
+    ${body ? `<p class="lead">${esc(body)}</p>` : '<div style="height:16px"></div>'}
+    <div class="btn-row" style="justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeDialog(false)">Cancel</button>
+      <button class="btn ${danger ? 'btn-danger' : ''}" id="dialog-ok" onclick="closeDialog(true)">${esc(okLabel || 'OK')}</button>
+    </div>`;
+  document.getElementById('dialog').className = 'overlay open';
+  document.body.classList.add('modal-open');
+  return new Promise(resolve => { dialogResolve = resolve; });
+}
+function closeDialog(ok) {
+  document.getElementById('dialog').className = 'overlay';
+  if (!document.getElementById('onboarding-overlay').classList.contains('open')) document.body.classList.remove('modal-open');
+  const r = dialogResolve; dialogResolve = null;
+  if (r) r(ok);
 }
 
 function helmError(msg) { const e = new Error(msg); e.helm = true; return e; }
@@ -414,30 +1344,44 @@ async function loadInstalledThenStore() {
   renderStore();
 }
 
+// ---- onboarding, scanning and pairing ----
 const ONBOARDING_STEPS = {
   firetv: [
-    { num: 1, text: 'Go to <b>Settings → My Fire TV → About</b>' },
-    { num: 2, text: 'Click your device name <b>7 times</b> until it says "You are now a developer!"' },
-    { num: 3, text: 'Go back — you will now see <b>Developer Options</b>' },
-    { num: 4, text: 'Turn on <b>ADB Debugging</b> and <b>Apps from Unknown Sources</b>' },
+    'Go to <b>Settings → My Fire TV → About</b>',
+    'Click your device name <b>7 times</b> until it says "You are now a developer!"',
+    'Go back — you will now see <b>Developer Options</b>',
+    'Turn on <b>ADB Debugging</b> and <b>Apps from Unknown Sources</b>',
   ],
   googletv: [
-    { num: 1, text: 'Go to <b>Settings → System → About</b>' },
-    { num: 2, text: 'Click "Build" or "Android TV OS Build" <b>7 times</b> until it says "You are now a developer!"' },
-    { num: 3, text: 'Go back — you will now see <b>Developer options</b>' },
-    { num: 4, text: 'Turn on <b>USB debugging</b> (or <b>Network debugging</b> if that is what you see)' },
+    'Go to <b>Settings → System → About</b>',
+    'Click "Build" or "Android TV OS Build" <b>7 times</b> until it says "You are now a developer!"',
+    'Go back — you will now see <b>Developer options</b>',
+    'Turn on <b>USB debugging</b> (or <b>Network debugging</b> if that is what you see)',
   ],
 };
 
-let onboardingDeviceType = 'firetv';
+let onboardingDeviceType = 'googletv';
 
+function openOverlay() {
+  document.getElementById('onboarding-overlay').className = 'overlay open';
+  document.body.classList.add('modal-open');
+}
 function openOnboarding() {
-  document.getElementById('onboarding-overlay').style.display = 'block';
+  openOverlay();
   renderOnboardingSteps();
+}
+function findMyTv() {
+  openOverlay();
+  startNetworkScan();
+}
+function openPairing() {
+  openOverlay();
+  openPairingFlow();
 }
 
 function closeOnboarding() {
-  document.getElementById('onboarding-overlay').style.display = 'none';
+  document.getElementById('onboarding-overlay').className = 'overlay';
+  document.body.classList.remove('modal-open');
 }
 
 function setOnboardingType(type) {
@@ -445,48 +1389,38 @@ function setOnboardingType(type) {
   renderOnboardingSteps();
 }
 
+function sheet(html) {
+  const el = document.getElementById('onboarding-content');
+  el.innerHTML = `<button class="sheet-close" onclick="closeOnboarding()" title="Close">${icon('x')}</button>` + html;
+  el.scrollTop = 0;
+}
+
 function renderOnboardingSteps() {
   const steps = ONBOARDING_STEPS[onboardingDeviceType];
-  document.getElementById('onboarding-content').innerHTML = `
-    <div style="background:#111;border-radius:16px;padding:20px">
-      <button class="btn btn-sm btn-outline" onclick="closeOnboarding()" style="margin-bottom:16px">✕ Close</button>
-      <h1 style="margin:0 0 6px">Let's connect your TV</h1>
-      <p style="color:#999;font-size:14px;margin:0 0 20px;line-height:1.5">Helm needs USB debugging turned on to control your TV remotely. This is a one-time setup.</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
-        <div onclick="setOnboardingType('firetv')" style="cursor:pointer;background:#1c1c1e;border:2px solid ${onboardingDeviceType==='firetv'?'#2980b9':'transparent'};border-radius:12px;padding:14px">
-          <div style="font-size:22px;margin-bottom:6px">🔥</div>
-          <div style="font-weight:600;font-size:14px">Fire TV</div>
-          <div style="color:#888;font-size:11px;margin-top:2px">Fire TV Stick, Cube</div>
-        </div>
-        <div onclick="setOnboardingType('googletv')" style="cursor:pointer;background:#1c1c1e;border:2px solid ${onboardingDeviceType==='googletv'?'#2980b9':'transparent'};border-radius:12px;padding:14px">
-          <div style="font-size:22px;margin-bottom:6px">📺</div>
-          <div style="font-weight:600;font-size:14px">Google TV</div>
-          <div style="color:#888;font-size:11px;margin-top:2px">TCL, Sony, onn., Chromecast</div>
-        </div>
-      </div>
-      <div style="background:#1c1c1e;border-radius:12px;padding:16px">
-        <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px">On your remote</div>
-        ${steps.map(s => `
-          <div style="display:flex;gap:12px;margin-bottom:14px">
-            <div style="width:22px;height:22px;border-radius:50%;background:#2980b933;color:#5dade2;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">${s.num}</div>
-            <div style="font-size:14px;line-height:1.5">${s.text}</div>
-          </div>`).join('')}
-      </div>
-      <div style="background:#2980b915;border-radius:8px;padding:12px;margin-top:12px;display:flex;gap:8px">
-        <span>ℹ️</span>
-        <div style="font-size:12px;color:#5dade2;line-height:1.5">Other guides only ask for "Unknown Sources" for sideloading apps. Helm specifically needs ADB/USB Debugging too, since that is how it remotely controls your TV.</div>
-      </div>
-      <button class="btn" onclick="startNetworkScan()" style="width:100%;margin-top:18px;background:#2980b9">Done — scan for my TV →</button>
-    </div>`;
+  const typeCard = (type, ic, title, sub) =>
+    `<button class="type-card${onboardingDeviceType === type ? ' on' : ''}" onclick="setOnboardingType('${type}')">${icon(ic)}<b>${title}</b><small>${sub}</small></button>`;
+  sheet(`
+    <h2>Get your TV ready</h2>
+    <p class="lead">Helm talks to your TV through its developer options. It's a one-time switch.</p>
+    <div class="type-pick">
+      ${typeCard('googletv', 'tv', 'Google TV', 'TCL, Sony, onn., Chromecast')}
+      ${typeCard('firetv', 'flame', 'Fire TV', 'Fire TV Stick, Cube')}
+    </div>
+    <div class="steps-box">
+      <div class="eyebrow">With your TV remote</div>
+      ${steps.map((s, i) => `<div class="ostep"><span class="ostep-num">${i + 1}</span><span>${s}</span></div>`).join('')}
+    </div>
+    <div class="info-box">${icon('info')}<span>Guides for sideloading often only mention "Unknown sources". Helm also needs ADB / USB debugging: that's how it controls the TV.</span></div>
+    <button class="btn btn-block" onclick="startNetworkScan()" style="margin-top:18px">${icon('scan-search')}Find my TV</button>`);
 }
 
 async function startNetworkScan() {
-  document.getElementById('onboarding-content').innerHTML = `
-    <div style="background:#111;border-radius:16px;padding:20px;text-align:center">
-      <div style="font-size:32px;margin-bottom:12px">📡</div>
-      <div style="font-weight:600;font-size:16px;margin-bottom:6px">Scanning your network...</div>
-      <div style="color:#888;font-size:13px">This can take up to 30 seconds</div>
-    </div>`;
+  sheet(`
+    <div class="scan-wait">
+      ${icon('radar', 'spin')}
+      <h2 style="margin:0">Looking for TVs…</h2>
+      <p class="lead" style="margin-bottom:0">Checking your Wi‑Fi network. This can take up to 30 seconds.</p>
+    </div>`);
   try {
     const res = await fetch(`${API}/scan-network`);
     const data = await res.json();
@@ -496,83 +1430,57 @@ async function startNetworkScan() {
   }
 }
 
+let scanResults = [];
 function renderScanResults(devices) {
-  document.getElementById('onboarding-content').innerHTML = `
-    <div style="background:#111;border-radius:16px;padding:20px">
-      <button class="btn btn-sm btn-outline" onclick="closeOnboarding()" style="margin-bottom:16px">✕ Close</button>
-      <h1 style="margin:0 0 6px">${devices.length ? 'Found ' + devices.length + ' device' + (devices.length>1?'s':'') : 'No devices found'}</h1>
-      <p style="color:#999;font-size:14px;margin:0 0 20px">${devices.length ? 'Tap a device to connect' : 'Double check developer mode is on, then try again'}</p>
-      ${devices.map(d => `
-        <div onclick="connectFromScan('${d.ip}')" style="cursor:pointer;background:#1c1c1e;border-radius:12px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
-          <div style="font-size:22px">📺</div>
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:14px">${d.model}</div>
-            <div style="color:#888;font-size:12px">${d.ip}</div>
-          </div>
-          <span style="color:#555;font-size:18px">›</span>
-        </div>`).join('')}
-      <button class="btn btn-outline" onclick="startNetworkScan()" style="width:100%;margin-top:8px">🔄 Scan again</button>
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #222">
-        <div style="color:#888;font-size:12px;margin-bottom:8px">Have an onn. or newer Google TV that wasn't found?</div>
-        <button class="btn btn-outline" onclick="openPairingFlow()" style="width:100%;font-size:13px">🔗 Pair manually with a code</button>
-      </div>
-    </div>`;
+  scanResults = devices;
+  sheet(`
+    <h2>${devices.length ? 'Found ' + devices.length + ' TV' + (devices.length > 1 ? 's' : '') : 'No TVs found'}</h2>
+    <p class="lead">${devices.length ? 'Choose one to connect.' : 'Make sure developer options and debugging are on, and that the TV is on the same Wi‑Fi.'}</p>
+    ${devices.map((d, i) => `
+      <button class="saved-device" onclick="connectFromScan(scanResults[${i}].ip)"><span class="row-in">
+        <span class="icon-tile">${icon('tv')}</span>
+        <span class="row-info"><span class="row-title" style="display:block">${esc(d.model)}</span><span class="row-sub" style="display:block">${esc(d.ip)}</span></span>
+        ${icon('chevron-right', 'chev')}
+      </span></button>`).join('')}
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn btn-outline" onclick="startNetworkScan()">${icon('refresh-cw')}Scan again</button>
+      <button class="btn btn-ghost" onclick="openPairingFlow()">${icon('link')}Pair with a code</button>
+    </div>
+    <p class="hint">onn. and newer Google TVs often don't show up here until they're paired.</p>`);
 }
 
 function openPairingFlow() {
-  document.getElementById('onboarding-content').innerHTML = `
-    <div style="background:#111;border-radius:16px;padding:20px">
-      <button class="btn btn-sm btn-outline" onclick="startNetworkScan()" style="margin-bottom:16px">← Back</button>
-      <h1 style="margin:0 0 6px">Pair with a code</h1>
-      <p style="color:#999;font-size:13px;margin:0 0 20px;line-height:1.5">For onn. and newer Google TV devices that require wireless pairing.</p>
+  sheet(`
+    <h2>Pair with a code</h2>
+    <p class="lead">For onn. and newer Google TVs that use wireless debugging.</p>
+    <div class="steps-box">
+      <div class="eyebrow">On your TV</div>
+      <div class="ostep"><span class="ostep-num">1</span><span>Settings → Network &amp; Internet (or System → Developer options)</span></div>
+      <div class="ostep"><span class="ostep-num">2</span><span>Turn on <b>Wireless debugging</b></span></div>
+      <div class="ostep"><span class="ostep-num">3</span><span>Choose <b>Pair device with pairing code</b>. The TV shows a 6-digit code and an address like <span class="code-line">192.168.1.45:37829</span></span></div>
+    </div>
+    <label class="field" for="pair-address">IP address and port shown on the TV</label>
+    <input class="input" id="pair-address" type="text" placeholder="192.168.1.45:37829" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <label class="field" for="pair-code">6-digit pairing code</label>
+    <input class="input" id="pair-code" type="text" placeholder="123456" maxlength="6" autocomplete="off" style="letter-spacing:0.2em" onkeydown="if(event.keyCode===13)submitPairing()">
+    <button class="btn btn-block" onclick="submitPairing()" style="margin-top:18px">Pair and connect</button>
+    <div class="status-line" id="pair-status"></div>`);
+}
 
-      <div style="background:#1c1c1e;border-radius:12px;padding:16px;margin-bottom:18px">
-        <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:#ccc">On your TV, go to:</div>
-        <div style="color:#888;font-size:13px;line-height:1.8">
-          Settings → Network & Internet<br>
-          → <strong style="color:#ccc">Wireless debugging</strong> → Turn it ON<br>
-          → Tap <strong style="color:#2980b9">Pair device with pairing code</strong>
-        </div>
-        <div style="margin-top:10px;padding:10px;background:#0d0d0d;border-radius:8px;color:#888;font-size:12px">
-          Your TV will show a <strong style="color:#ccc">6-digit code</strong> and a <strong style="color:#ccc">port number</strong> like <span style="color:#2980b9;font-family:monospace">192.168.1.45:37829</span>
-        </div>
-      </div>
-
-      <div style="margin-bottom:14px">
-        <label style="display:block;color:#888;font-size:12px;margin-bottom:6px">TV IP + port shown on screen</label>
-        <input id="pair-address" type="text" placeholder="e.g. 192.168.1.45:37829"
-          style="width:100%;box-sizing:border-box;background:#1c1c1e;border:1px solid #333;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;outline:none" />
-      </div>
-      <div style="margin-bottom:18px">
-        <label style="display:block;color:#888;font-size:12px;margin-bottom:6px">6-digit pairing code</label>
-        <input id="pair-code" type="text" placeholder="e.g. 123456" maxlength="6"
-          style="width:100%;box-sizing:border-box;background:#1c1c1e;border:1px solid #333;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;outline:none;letter-spacing:0.1em" />
-      </div>
-
-      <button class="btn" onclick="submitPairing()" style="width:100%;background:#2980b9">Pair and connect →</button>
-      <div id="pair-status" style="margin-top:14px;font-size:13px;color:#888;text-align:center"></div>
-    </div>`;
+function pairStatus(text, kind) {
+  const s = document.getElementById('pair-status');
+  s.className = 'status-line' + (kind ? ' ' + kind : '');
+  s.textContent = text;
 }
 
 async function submitPairing() {
   const pairAddress = document.getElementById('pair-address').value.trim();
   const code = document.getElementById('pair-code').value.trim();
-  const status = document.getElementById('pair-status');
 
-  if (!pairAddress || !pairAddress.includes(':')) {
-    status.style.color = '#e74c3c';
-    status.textContent = 'Enter the full IP:port shown on your TV';
-    return;
-  }
-  if (!code || code.length < 6) {
-    status.style.color = '#e74c3c';
-    status.textContent = 'Enter the 6-digit code shown on your TV';
-    return;
-  }
+  if (!pairAddress || !pairAddress.includes(':')) { pairStatus('Enter the full IP:port shown on your TV', 'bad'); return; }
+  if (!code || code.length < 6) { pairStatus('Enter the 6-digit code shown on your TV', 'bad'); return; }
 
-  status.style.color = '#888';
-  status.textContent = '⏳ Pairing... (this takes up to 15 seconds)';
-
+  pairStatus('Pairing… this takes up to 15 seconds');
   try {
     const res = await fetch(`${API}/pair`, {
       method: 'POST',
@@ -580,20 +1488,14 @@ async function submitPairing() {
       body: JSON.stringify({ pair_address: pairAddress, code })
     });
     const data = await res.json();
-
     if (data.success) {
-      status.style.color = '#27ae60';
-      status.textContent = `✅ Connected to ${data.model} (${data.ip})`;
-      setTimeout(() => {
-        connectFromScan(data.ip);
-      }, 1200);
+      pairStatus(`Paired with ${data.model} (${data.ip})`, 'ok');
+      setTimeout(() => { connectFromScan(data.ip); }, 1200);
     } else {
-      status.style.color = '#e74c3c';
-      status.textContent = `❌ ${data.error || 'Pairing failed — double-check the code and port'}`;
+      pairStatus(data.error || 'Pairing failed. Double-check the code and port', 'bad');
     }
   } catch(e) {
-    status.style.color = '#e74c3c';
-    status.textContent = '❌ Could not reach Helm server';
+    pairStatus('Could not reach Helm', 'bad');
   }
 }
 
@@ -603,6 +1505,44 @@ function connectFromScan(ip) {
   connect();
 }
 
+// ---- connecting ----
+async function describeDevice() {
+  const mfr = (await adb('shell getprop ro.product.manufacturer')).toLowerCase().trim();
+  const model = (await adb('shell getprop ro.product.model')).trim();
+  const brand = (await adb('shell getprop ro.product.brand')).toLowerCase().trim();
+  const combined = mfr + ' ' + brand;
+  const type = combined.includes('amazon') ? 'firetv' : 'googletv';
+  let friendlyName = 'Android TV';
+  for (const [key, val] of Object.entries(DEVICE_NAMES)) {
+    if (combined.includes(key)) { friendlyName = val; break; }
+  }
+  if (model && model.length > 0 && !model.includes('unknown')) {
+    friendlyName = friendlyName + ' · ' + model;
+  }
+  return { type, friendlyName };
+}
+
+function rememberDevice(ip, name, type) {
+  localStorage.setItem('lastIp', ip);
+  localStorage.setItem('deviceType', type);
+  savedDevices = savedDevices.filter(d => d.ip !== ip);
+  savedDevices.unshift({ ip, name, type });
+  savedDevices = savedDevices.slice(0, 8);
+  localStorage.setItem('savedDevices', JSON.stringify(savedDevices));
+}
+
+// Each connect attempt takes a number; only the latest may change the
+// connection. Otherwise the quiet reconnect at startup, if slow, could
+// override a TV the person connected to meanwhile.
+let connectSeq = 0;
+
+// After a connection, refresh what depends on the TV's app list.
+function afterConnect() {
+  loadInstalledPackages().then(() => {
+    if (document.getElementById('page-store').classList.contains('active')) renderStore();
+  });
+}
+
 async function connect() {
   // Accept "192.168.1.78" or "192.168.1.78:5555" - Helm connects on 5555.
   const ip = document.getElementById('ip-input').value.trim().replace(/:\d+$/, '');
@@ -610,106 +1550,118 @@ async function connect() {
   const btn = document.getElementById('connect-btn');
   btn.textContent = 'Connecting...';
   btn.disabled = true;
+  setStatus('busy', 'Connecting…');
+  const seq = ++connectSeq;
   try {
     await openConnection(ip);
-    currentIp = ip;
-    const mfr = (await adb('shell getprop ro.product.manufacturer')).toLowerCase().trim();
-    const model = (await adb('shell getprop ro.product.model')).trim();
-    const brand = (await adb('shell getprop ro.product.brand')).toLowerCase().trim();
-    const combined = mfr + ' ' + brand;
-    let type = 'googletv';
-    if (combined.includes('amazon')) type = 'firetv';
-    let friendlyName = 'Android TV';
-    for (const [key, val] of Object.entries(DEVICE_NAMES)) {
-      if (combined.includes(key)) { friendlyName = val; break; }
+    if (seq === connectSeq) {
+      currentIp = ip;
+      const { type, friendlyName } = await describeDevice();
+      currentDeviceType = type;
+      rememberDevice(ip, friendlyName, type);
+      applyTheme(type);
+      showConnected(friendlyName, ip);
+      toast(`Connected to ${friendlyName}`, 'success');
+      afterConnect();
     }
-    if (model && model.length > 0 && !model.includes('unknown')) {
-      friendlyName = friendlyName + ' · ' + model;
-    }
-    currentDeviceType = type;
-    localStorage.setItem('lastIp', ip);
-    localStorage.setItem('deviceType', type);
-    savedDevices = savedDevices.filter(d => d.ip !== ip);
-    savedDevices.unshift({ ip, name: friendlyName, type });
-    localStorage.setItem('savedDevices', JSON.stringify(savedDevices));
-    applyTheme(type);
-    showConnected(friendlyName, ip);
-    toast(`Connected to ${friendlyName}`, 'success');
-    loadInstalledPackages();
   } catch(e) {
-    toast(e && e.helm ? e.message : 'Connection failed — check IP and WiFi', 'error');
+    if (seq === connectSeq) {
+      if (currentIp) setStatus('on', currentName); else setStatus('off', 'Not connected');
+      toast(e && e.helm ? e.message : 'Connection failed — check IP and WiFi', 'error');
+    }
   }
   btn.textContent = 'Connect';
   btn.disabled = false;
 }
 
 function showConnected(name, ip) {
+  currentName = name;
   document.getElementById('connect-view').style.display = 'none';
   document.getElementById('connected-view').style.display = 'block';
   const t = THEMES[currentDeviceType] || THEMES.unknown;
-  document.getElementById('device-name').textContent = t.icon + ' ' + name;
+  document.getElementById('device-badge').innerHTML = icon(t.icon);
+  document.getElementById('device-name').textContent = name;
   document.getElementById('device-ip').textContent = ip;
-  document.getElementById('status-dot').style.background = '#27ae60';
-  document.getElementById('status-text').textContent = `Connected · ${name} · ${ip}`;
+  setStatus('on', name);
+  renderSavedDevices();
+  renderRemote();
 }
 
 function disconnect() {
   currentIp = '';
+  currentName = '';
   currentDeviceType = 'unknown';
   installedPackages = [];
   applyTheme('unknown');
   document.getElementById('connect-view').style.display = 'block';
   document.getElementById('connected-view').style.display = 'none';
-  document.getElementById('status-dot').style.background = '#c0392b';
-  document.getElementById('status-text').textContent = 'Not connected to a device';
+  setStatus('off', 'Not connected');
   renderSavedDevices();
+  renderRemote();
 }
 
 async function reboot() {
-  if (!confirm('Reboot the TV?')) return;
+  if (!await askConfirm('Restart the TV?', 'Helm will disconnect while it restarts. Reconnect in a minute or so.', 'Restart', true)) return;
   await adb('reboot');
-  toast('Rebooting...', 'info');
+  toast('Restarting your TV…', 'info');
 }
 
 function renderSavedDevices() {
-  const el = document.getElementById('saved-devices');
-  if (!savedDevices.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div class="category-title">Recent Devices</div>' +
-    savedDevices.map(d => {
+  // Not connected: every recent TV. Connected: the others, to switch to.
+  const el = document.getElementById(currentIp ? 'other-devices' : 'saved-devices');
+  document.getElementById(currentIp ? 'saved-devices' : 'other-devices').innerHTML = '';
+  const list = savedDevices.map((d, i) => [d, i]).filter(([d]) => d.ip !== currentIp);
+  if (!list.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="section-label">${currentIp ? 'Other TVs' : 'Recent'}</div>` +
+    list.map(([d, i]) => {
       const dt = THEMES[d.type] || THEMES.unknown;
-      return `<div class="saved-device" onclick="quickConnect('${d.ip}','${d.name}','${d.type}')">
-        <span style="font-size:22px">${dt.icon}</span>
-        <div><div style="font-weight:600;font-size:14px">${d.name}</div><div style="color:#555;font-size:12px">${d.ip}</div></div>
-      </div>`;
+      return `<button class="saved-device" onclick="quickConnectAt(${i})"><span class="row-in">
+        <span class="icon-tile" style="color:${dt.primary}">${icon(dt.icon)}</span>
+        <span class="row-info"><span class="row-title" style="display:block">${esc(d.name)}</span><span class="row-sub" style="display:block">${esc(d.ip)}</span></span>
+        ${icon('chevron-right', 'chev')}
+      </span></button>`;
     }).join('');
 }
 
-async function quickConnect(ip, name, type) {
+function quickConnectAt(i) {
+  const d = savedDevices[i];
+  if (d) quickConnect(d.ip, d.name, d.type);
+}
+
+async function quickConnect(ip, name, type, quiet) {
+  const seq = ++connectSeq;
+  setStatus('busy', quiet ? 'Reconnecting…' : 'Connecting…');
   try {
     await openConnection(ip);
   } catch (e) {
-    toast(e && e.helm ? e.message : 'Connection failed', 'error');
+    if (seq !== connectSeq) return;
+    if (currentIp) setStatus('on', currentName); else setStatus('off', 'Not connected');
+    if (!quiet) toast(e && e.helm ? e.message : 'Connection failed', 'error');
     return;
   }
+  if (seq !== connectSeq) return;
   currentIp = ip;
   currentDeviceType = type;
   localStorage.setItem('lastIp', ip);
   localStorage.setItem('deviceType', type);
   applyTheme(type);
   showConnected(name, ip);
-  toast(`Connected to ${name}`, 'success');
-  loadInstalledPackages();
+  if (!quiet) toast(`Connected to ${name}`, 'success');
+  afterConnect();
 }
 
+// ---- store ----
+let storeFilter = null;
 function renderStore() {
   const cats = [...new Set(STORE.map(a => a.category))];
   document.getElementById('store-filters').innerHTML =
-    `<div class="filter-chip active" onclick="filterStore(null,this)">All</div>` +
-    cats.map(c => `<div class="filter-chip" onclick="filterStore('${c}',this)">${c}</div>`).join('');
-  renderStoreList(STORE);
+    `<button class="filter-chip${storeFilter ? '' : ' active'}" onclick="filterStore(null,this)">All</button>` +
+    cats.map(c => `<button class="filter-chip${storeFilter === c ? ' active' : ''}" onclick="filterStore('${c}',this)">${c}</button>`).join('');
+  renderStoreList(storeFilter ? STORE.filter(a => a.category === storeFilter) : STORE);
 }
 
 function filterStore(cat, el) {
+  storeFilter = cat;
   document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   renderStoreList(cat ? STORE.filter(a => a.category === cat) : STORE);
@@ -723,21 +1675,21 @@ function renderStoreList(apps) {
   document.getElementById('store-list').innerHTML = apps.map(app => {
     const installed = isInstalled(app.pkg);
     const key = app.name.replace(/\s/g,'_');
+    const action = installed ? '' : (app.playstore ? `openPlayStore('${app.pkg}','${app.name}')` : `installApp('${app.name}','${encodeURIComponent(app.url)}','${app.pkg}'${app.url_v7a ? `,'${encodeURIComponent(app.url_v7a)}'` : ''})`);
+    const label = installed ? icon('check') + 'Installed' : (app.playstore ? 'Play Store' : (currentIp ? 'Install' : 'Get'));
+    const after = installed && app.after
+      ? `<button class="btn btn-sm btn-outline btn-after" onclick="runAfter('${app.pkg}')">${app.after.label}</button>` : '';
     return `
-    <div class="app-row">
-      <div class="app-icon">${app.icon}</div>
+    <div class="app-card">
+      ${tile(app.name, app.color)}
       <div class="app-info">
-        <div class="app-name">${app.name} ${installed ? '<span style="color:#27ae60;font-size:11px">✓ Installed</span>' : ''}</div>
+        <div class="app-name">${app.name}</div>
         <div class="app-desc">${app.desc}</div>
-        <span class="tag">${app.category}</span>
+        <div class="app-meta">${app.category}${app.playstore ? ' · opens Google Play on the TV' : ''}</div>
       </div>
       <div class="app-actions">
-        <button class="btn btn-sm ${installed ? 'btn-installed' : ''}"
-          onclick="${installed ? '' : (app.playstore ? `openPlayStore('${app.pkg}','${app.name}')` : `installApp('${app.name}','${encodeURIComponent(app.url)}','${app.pkg}'${app.url_v7a ? `,'${encodeURIComponent(app.url_v7a)}'` : ''})`)}"
-          id="install-${key}"
-          ${installed ? 'disabled' : ''}>
-          ${installed ? '✓ Installed' : (app.playstore ? 'Open Play Store' : (currentIp ? 'Install' : 'Get'))}
-        </button>
+        <button class="btn btn-sm ${installed ? 'btn-installed' : ''}" onclick="${action}" id="install-${key}" ${installed ? 'disabled' : ''}>${label}</button>
+        ${after}
         <div class="progress-wrap" id="progress-wrap-${key}">
           <div class="progress-bar" id="progress-${key}"></div>
         </div>
@@ -745,6 +1697,14 @@ function renderStoreList(apps) {
       </div>
     </div>`;
   }).join('');
+}
+
+async function runAfter(pkg) {
+  const app = STORE.find(a => a.pkg === pkg);
+  if (!app || !app.after || !currentIp) return;
+  const r = await adbRaw(`adb -s ${currentIp}:5555 ${app.after.command}`);
+  if (r.error && /error|exception|denied/i.test(r.error)) toast(`Couldn't do that: ${r.error.slice(0, 120)}`, 'error');
+  else toast(app.after.done, 'success');
 }
 
 async function openPlayStore(pkg, name) {
@@ -809,7 +1769,7 @@ async function installApp(name, encodedUrl, pkg, encodedUrlV7a) {
   btn.textContent = 'Starting...';
   btn.disabled = true;
   wrap.style.display = 'block';
-  label.textContent = 'Downloading APK...';
+  label.textContent = 'Downloading…';
 
   let prog = 0;
   const interval = setInterval(() => {
@@ -819,7 +1779,7 @@ async function installApp(name, encodedUrl, pkg, encodedUrlV7a) {
   toast(`Installing ${name}...`, 'info');
   try {
     setTimeout(() => {
-      label.textContent = 'Installing on TV...';
+      label.textContent = 'Installing on TV…';
     }, 30000);
 
     const res = await fetch(`${API}/adb`, {
@@ -836,17 +1796,17 @@ async function installApp(name, encodedUrl, pkg, encodedUrlV7a) {
 
     if (!succeeded) {
       bar.style.width = '100%';
-      bar.style.background = '#c0392b';
+      bar.classList.add('failed');
       label.textContent = 'Install failed';
       toast(`${name} install failed: ${installProblem(result)}`, 'error');
     } else {
       bar.style.width = '100%';
-      label.textContent = '✓ Installed!';
+      label.textContent = '✓ Installed';
       installedPackages.push(pkg);
       toast(`${name} installed!`, 'success');
-      setTimeout(() => renderStoreList(STORE), 1500);
+      setTimeout(() => renderStore(), 1500);
     }
-    setTimeout(() => { wrap.style.display = 'none'; bar.style.width = '0%'; bar.style.background = 'var(--primary)'; label.textContent = ''; }, 3000);
+    setTimeout(() => { wrap.style.display = 'none'; bar.style.width = '0%'; bar.classList.remove('failed'); label.textContent = ''; }, 3000);
   } catch(e) {
     clearInterval(interval);
     toast('Install failed — check connection', 'error');
@@ -856,110 +1816,133 @@ async function installApp(name, encodedUrl, pkg, encodedUrlV7a) {
   btn.disabled = false;
 }
 
+// ---- bloatware ----
+function emptyState(ic, text, action) {
+  return `<div class="empty">${icon(ic)}${text}${action || ''}</div>`;
+}
+const CONNECT_FIRST = () => emptyState('tv', 'Connect to a TV first', `<div style="margin-top:14px"><button class="btn btn-sm btn-outline" onclick="showPage('devices')">Go to Devices</button></div>`);
+
 async function renderBloat() {
+  document.getElementById('disable-all').style.display = currentIp ? '' : 'none';
   if (!currentIp) {
-    document.getElementById('bloat-list').innerHTML = '<div class="empty">Connect to a device first</div>';
+    document.getElementById('bloat-list').innerHTML = CONNECT_FIRST();
     return;
   }
   const list = currentDeviceType === 'firetv' ? FIRETV_BLOAT : GOOGLETV_BLOAT;
-  document.getElementById('bloat-list').innerHTML = '<div class="loading">Loading from TV...</div>';
-  
+  document.getElementById('bloat-list').innerHTML = `<div class="loading">${icon('loader-circle', 'spin')}</div>`;
+
   try {
     const result = await adb('shell pm list packages -d');
     const disabled = result.split('\n')
       .map(l => l.replace('package:', '').replace(/\r/g, '').trim())
       .filter(l => l.length > 0);
-    
+
     document.getElementById('bloat-list').innerHTML = list.map(item => {
       const enabled = !disabled.includes(item.pkg);
       return `<div class="bloat-row">
-        <div>
-          <div style="font-weight:500;font-size:14px">${item.name}</div>
-          <div style="color:#333;font-size:10px;margin-top:2px">${item.pkg}</div>
+        <div class="row-info">
+          <div class="row-title">${item.name}</div>
+          <div class="row-sub">${item.pkg}</div>
         </div>
-        <label class="toggle">
+        <label class="toggle" title="${enabled ? 'On' : 'Off'}">
           <input type="checkbox" ${enabled ? 'checked' : ''} onchange="toggleBloat('${item.pkg}',this.checked)">
           <span class="slider"></span>
         </label>
       </div>`;
     }).join('');
-  } catch {
-    document.getElementById('bloat-list').innerHTML = '<div class="empty">Failed to load from TV</div>';
+  } catch (e) {
+    document.getElementById('bloat-list').innerHTML = emptyState('circle-alert', "Couldn't load the list from the TV");
   }
 }
 
-async function toggleBloat(pkg, enabled) {
+async function toggleBloat(pkg, enabled, quiet) {
   if (!currentIp) { toast('Connect first', 'error'); return; }
   const cmd = enabled ? `shell pm enable ${pkg}` : `shell pm disable-user --user 0 ${pkg}`;
   await adb(cmd);
-  toast(enabled ? 'Enabled' : 'Disabled', 'info');
+  if (!quiet) toast(enabled ? 'Turned on' : 'Turned off', 'info');
 }
 
-function disableAll() {
-  if (!confirm('Disable all bloatware?')) return;
+async function disableAll() {
+  if (!await askConfirm('Turn off all of these?', 'You can turn any of them back on later from this page.', 'Turn off all', true)) return;
   const list = currentDeviceType === 'firetv' ? FIRETV_BLOAT : GOOGLETV_BLOAT;
-  list.forEach(item => toggleBloat(item.pkg, false));
-  setTimeout(renderBloat, 2000);
+  for (const item of list) await toggleBloat(item.pkg, false, true);
+  toast('Bloatware turned off', 'success');
+  renderBloat();
 }
 
+// ---- my apps ----
 const FRIENDLY_NAMES = {
-  'org.xbmc.kodi': { name: 'Kodi', icon: '🎬' },
-  'org.smarttube.stable': { name: 'SmartTube', icon: '▶️' },
-  'org.schabi.newpipe': { name: 'NewPipe', icon: '🟢' },
-  'flar2.homebutton': { name: 'Button Mapper', icon: '🎮' },
-  'com.spocky.projengmenu': { name: 'Projectivy', icon: '🚀' },
-  'org.videolan.vlc': { name: 'VLC', icon: '🔺' },
-  'com.retroarch.ra32': { name: 'RetroArch', icon: '🕹️' },
-  'org.ppsspp.ppsspp': { name: 'PPSSPP', icon: '🎮' },
-  'org.jellyfin.androidtv': { name: 'Jellyfin', icon: '🪼' },
-  'com.plexapp.android': { name: 'Plex', icon: '🎬' },
-  'com.mxtech.videoplayer.ad': { name: 'MX Player', icon: '▶️' },
-  'com.stremio.one': { name: 'Stremio', icon: '🌀' },
-  'com.esaba.downloader': { name: 'Downloader', icon: '⬇️' },
-  'com.netflix.ninja': { name: 'Netflix', icon: '🎬' },
-  'com.netflix.mediaclient': { name: 'Netflix', icon: '🎬' },
-  'com.amazon.amazonvideo.livingroom': { name: 'Amazon Video', icon: '📺' },
-  'com.disney.disneyplus': { name: 'Disney+', icon: '✨' },
-  'com.hulu.plus': { name: 'Hulu', icon: '📺' },
-  'tv.pluto.android': { name: 'Pluto TV', icon: '📡' },
-  'com.tubitv': { name: 'Tubi', icon: '🎥' },
-  'com.google.android.youtube.tv': { name: 'YouTube', icon: '▶️' },
-  'com.amazon.firetv.youtube': { name: 'YouTube (Fire TV)', icon: '▶️' },
-  'com.wbd.stream': { name: 'Max', icon: '📺' },
-  'com.peacocktv.peacockandroid': { name: 'Peacock', icon: '🦚' },
-  'com.hbo.hbonow': { name: 'HBO Max', icon: '📺' },
-  'com.twitch.tv': { name: 'Twitch', icon: '🎮' },
+  'org.xbmc.kodi': 'Kodi',
+  'org.smarttube.stable': 'SmartTube',
+  'org.schabi.newpipe': 'NewPipe',
+  'flar2.homebutton': 'Button Mapper',
+  'com.spocky.projengmenu': 'Projectivy',
+  'org.videolan.vlc': 'VLC',
+  'com.retroarch.ra32': 'RetroArch',
+  'org.ppsspp.ppsspp': 'PPSSPP',
+  'org.jellyfin.androidtv': 'Jellyfin',
+  'com.plexapp.android': 'Plex',
+  'com.mxtech.videoplayer.ad': 'MX Player',
+  'com.stremio.one': 'Stremio',
+  'com.esaba.downloader': 'Downloader',
+  'com.limelight': 'Moonlight',
+  'com.neilturner.aerialviews': 'Aerial Views',
+  'com.phlox.tvwebbrowser': 'TV Bro',
+  'org.localsend.localsend_app': 'LocalSend',
+  'com.brouken.player': 'Just Player',
+  'com.swordfish.lemuroid': 'Lemuroid',
+  'com.netflix.ninja': 'Netflix',
+  'com.netflix.mediaclient': 'Netflix',
+  'com.amazon.amazonvideo.livingroom': 'Prime Video',
+  'com.disney.disneyplus': 'Disney+',
+  'com.hulu.plus': 'Hulu',
+  'tv.pluto.android': 'Pluto TV',
+  'com.tubitv': 'Tubi',
+  'com.google.android.youtube.tv': 'YouTube',
+  'com.amazon.firetv.youtube': 'YouTube (Fire TV)',
+  'com.wbd.stream': 'Max',
+  'com.peacocktv.peacockandroid': 'Peacock',
+  'com.hbo.hbonow': 'HBO Max',
+  'com.twitch.tv': 'Twitch',
 };
 
 function formatAppName(pkg) {
-  if (FRIENDLY_NAMES[pkg]) return FRIENDLY_NAMES[pkg];
+  const store = STORE.find(a => a.pkg === pkg);
+  if (FRIENDLY_NAMES[pkg]) return { name: FRIENDLY_NAMES[pkg], color: store && store.color };
   const parts = pkg.split('.').filter(p => !['com','org','tv','net','io','android','amazon','google'].includes(p));
   const raw = parts[parts.length - 1] || pkg;
-  const name = raw.replace(/([A-Z])/g, ' $1').trim();
-  return { name: name.charAt(0).toUpperCase() + name.slice(1), icon: '📱' };
+  const name = raw.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim();
+  return { name: name.charAt(0).toUpperCase() + name.slice(1), color: null };
 }
 
 async function loadApps() {
-  document.getElementById('apps-list').innerHTML = '<div class="loading">Loading apps...</div>';
+  const list = document.getElementById('apps-list');
+  if (!currentIp) {
+    document.getElementById('apps-subtitle').textContent = "Apps you've added to your TV";
+    list.innerHTML = CONNECT_FIRST();
+    return;
+  }
+  list.innerHTML = `<div class="loading">${icon('loader-circle', 'spin')}</div>`;
   try {
     const result = await adb('shell pm list packages -3');
     const pkgs = result.split('\n').map(l => l.replace('package:','').trim()).filter(l => l.includes('.'));
-    document.getElementById('apps-subtitle').textContent = `${pkgs.length} sideloaded apps`;
-    document.getElementById('apps-list').innerHTML = pkgs.length ? pkgs.map(pkg => {
-      const { name, icon } = formatAppName(pkg);
-      return `<div class="installed-row">
-        <span style="font-size:22px">${icon}</span>
-        <div style="flex:1"><div class="pkg-name">${name}</div><div class="pkg-id">${pkg}</div></div>
-        <button class="btn btn-sm btn-danger" onclick="uninstallApp('${pkg}','${name}')">Remove</button>
+    document.getElementById('apps-subtitle').textContent = `${pkgs.length} app${pkgs.length === 1 ? '' : 's'} you've added to your TV`;
+    list.innerHTML = pkgs.length ? pkgs.map(pkg => {
+      const { name, color } = formatAppName(pkg);
+      return `<div class="installed-row list-row">
+        ${tile(name, color, true)}
+        <div class="row-info"><div class="pkg-name">${esc(name)}</div><div class="pkg-id">${esc(pkg)}</div></div>
+        <button class="btn btn-sm btn-ghost" data-pkg="${esc(pkg)}" onclick="uninstallApp(this.getAttribute('data-pkg'))">Remove</button>
       </div>`;
-    }).join('') : '<div class="empty">No sideloaded apps found</div>';
-  } catch {
-    document.getElementById('apps-list').innerHTML = '<div class="empty">Failed to load apps</div>';
+    }).join('') : emptyState('layout-grid', 'No added apps yet. Find some in the Store.');
+  } catch (e) {
+    list.innerHTML = emptyState('circle-alert', "Couldn't load apps from the TV");
   }
 }
 
-async function uninstallApp(pkg, name) {
-  if (!confirm(`Remove ${name}?`)) return;
+async function uninstallApp(pkg) {
+  const { name } = formatAppName(pkg);
+  if (!await askConfirm(`Remove ${name}?`, 'This uninstalls it from your TV.', 'Remove', true)) return;
   toast(`Removing ${name}...`, 'info');
   let result = await adb(`uninstall ${pkg}`);
   if (!result || result.toLowerCase().includes('failure')) {
@@ -970,46 +1953,45 @@ async function uninstallApp(pkg, name) {
   loadApps();
 }
 
+// ---- guides ----
 function renderGuides() {
   document.getElementById('guides-list').style.display = 'block';
   document.getElementById('guide-detail').style.display = 'none';
 
-  const decisionCards = `
-    <div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:0.04em;margin:4px 0 10px">What do you want to watch?</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px">
-      <div style="background:#1c1c1e;border:1px solid #2980b922;border-radius:12px;padding:14px">
-        <div style="font-size:22px;margin-bottom:6px">🎬</div>
-        <div style="font-weight:600;font-size:14px;margin-bottom:4px">Movies and TV</div>
-        <div style="color:#999;font-size:11px;line-height:1.4;margin-bottom:8px">Start with Stremio — looks like Netflix, ready in about 10 minutes.</div>
-        <span style="font-size:10px;padding:3px 8px;border-radius:6px;background:#2980b922;color:#5dade2">Easiest path</span>
+  let html = `
+    <div class="section-label" style="margin-top:0">What do you want to watch?</div>
+    <div class="choice-grid">
+      <div class="choice">
+        <span style="color:#4C8DFF">${icon('clapperboard')}</span>
+        <div class="choice-title">Movies and TV</div>
+        <div class="choice-body">Start with Stremio — looks like Netflix, ready in about 10 minutes.</div>
+        <span class="chip chip-accent" style="margin:0">Easiest path</span>
       </div>
-      <div style="background:#1c1c1e;border:1px solid #e67e2222;border-radius:12px;padding:14px">
-        <div style="font-size:22px;margin-bottom:6px">🏆</div>
-        <div style="font-weight:600;font-size:14px;margin-bottom:4px">Live sports</div>
-        <div style="color:#999;font-size:11px;line-height:1.4;margin-bottom:8px">Stremio's sports coverage is limited — use Kodi + The Crew instead.</div>
-        <span style="font-size:10px;padding:3px 8px;border-radius:6px;background:#e67e2222;color:#f0b27a">~20 minutes</span>
+      <div class="choice">
+        <span style="color:#F5A524">${icon('trophy')}</span>
+        <div class="choice-title">Live sports</div>
+        <div class="choice-body">Stremio's sports coverage is limited — use Kodi + The Crew instead.</div>
+        <span class="chip" style="margin:0">About 20 minutes</span>
       </div>
     </div>`;
-
-  let html = decisionCards;
   let lastSection = null;
-  const sectionLabels = { stremio: 'Movies and TV — Stremio', kodi: 'Best for Live Sports — Kodi' };
+  const sectionLabels = { stremio: 'Movies and TV — Stremio', kodi: 'Best for live sports — Kodi' };
 
   GUIDES.forEach(g => {
     if (g.section && g.section !== lastSection) {
-      html += `<div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:0.04em;margin:${lastSection ? '22px' : '4px'} 0 10px">${sectionLabels[g.section] || g.section}</div>`;
+      html += `<div class="section-label">${sectionLabels[g.section] || g.section}</div>`;
       lastSection = g.section;
     }
     html += `
-    <div class="guide-card" onclick="openGuideDetail('${g.id}')">
-      <div class="guide-icon-box" style="background:${g.color}22">${g.icon}</div>
-      <div style="flex:1">
-        <div style="font-weight:600;font-size:15px">${g.title}</div>
-        <div style="color:#555;font-size:12px;margin-top:3px">${g.desc}</div>
-        <div style="color:var(--primary);font-size:11px;margin-top:4px;font-weight:500">${g.steps.length} steps</div>
-      </div>
-      <span style="color:#333;font-size:20px">›</span>
-    </div>`;
+    <button class="guide-card" onclick="openGuideDetail('${g.id}')"><span class="row-in">
+      <span class="guide-icon-box" style="background:${rgba(g.color, 0.15)};color:${g.color}">${icon(g.icon)}</span>
+      <span class="row-info">
+        <span class="row-title" style="display:block">${g.title}</span>
+        <span class="row-sub" style="display:block;white-space:normal">${g.desc}</span>
+        <span class="guide-steps" style="display:block">${g.steps.length} steps</span>
+      </span>
+      ${icon('chevron-right', 'chev')}
+    </span></button>`;
   });
 
   document.getElementById('guides-list').innerHTML = html;
@@ -1021,32 +2003,327 @@ function openGuideDetail(id) {
   const detail = document.getElementById('guide-detail');
   detail.style.display = 'block';
   detail.innerHTML = `
-    <button class="btn btn-sm btn-outline" onclick="renderGuides()" style="margin-bottom:20px">← Back</button>
-    <h1>${g.icon} ${g.title}</h1>
-    <p class="subtitle">${g.desc}</p>
+    <a href="#" class="back-link" onclick="renderGuides();return false">${icon('arrow-left')}All guides</a>
+    <div class="page-head" style="display:flex;align-items:center">
+      <div class="guide-icon-box" style="background:${rgba(g.color, 0.15)};color:${g.color};margin-right:14px">${icon(g.icon)}</div>
+      <div><h1 style="font-size:22px">${g.title}</h1><p class="subtitle" style="margin-top:2px">${g.desc}</p></div>
+    </div>
     ${g.steps.map((s,i) => `
-      <div class="step" onclick="toggleStep(${i})">
+      <div class="step" id="step-${i}" onclick="toggleStep(${i})">
         <div class="step-header">
           <div class="step-num" style="background:${g.color}">${i+1}</div>
-          <div style="flex:1;font-weight:500;font-size:14px">${s.title}</div>
-          <span id="step-arrow-${i}" style="color:#555">▼</span>
+          <div class="step-title">${s.title}</div>
+          <span class="step-arrow">${icon('chevron-down')}</span>
         </div>
         <div class="step-body" id="step-body-${i}">${s.body}${s.action ? `<button class="btn btn-sm" style="margin-top:10px" onclick="event.stopPropagation();${s.action.fn}('${s.action.url}','${s.action.name}')">${s.action.label}</button>` : ''}</div>
       </div>`).join('')}`;
+  window.scrollTo(0, 0);
 }
 
 function toggleStep(i) {
   const body = document.getElementById('step-body-' + i);
-  const arrow = document.getElementById('step-arrow-' + i);
   body.classList.toggle('open');
-  arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
+  document.getElementById('step-' + i).classList.toggle('open');
 }
 
+// ---- remote ----
+// adb key events (any platform, over Wi-Fi) and IR (Android devices with an
+// IR blaster; codes and encoders in HelmIR above).
+const REMOTE_KEYS = {
+  power: 'KEYCODE_POWER', input: 'KEYCODE_TV_INPUT', mute: 'KEYCODE_VOLUME_MUTE',
+  up: 'KEYCODE_DPAD_UP', down: 'KEYCODE_DPAD_DOWN', left: 'KEYCODE_DPAD_LEFT', right: 'KEYCODE_DPAD_RIGHT',
+  ok: 'KEYCODE_DPAD_CENTER', back: 'KEYCODE_BACK', home: 'KEYCODE_HOME', menu: 'KEYCODE_SETTINGS',
+  vol_up: 'KEYCODE_VOLUME_UP', vol_down: 'KEYCODE_VOLUME_DOWN', ch_up: 'KEYCODE_CHANNEL_UP', ch_down: 'KEYCODE_CHANNEL_DOWN',
+  play_pause: 'KEYCODE_MEDIA_PLAY_PAUSE', rewind: 'KEYCODE_MEDIA_REWIND', ffwd: 'KEYCODE_MEDIA_FAST_FORWARD',
+  del: 'KEYCODE_DEL', enter: 'KEYCODE_ENTER',
+};
+const KEY_NAMES = { power: 'Power', input: 'Input', mute: 'Mute', ok: 'OK', back: 'Back', home: 'Home', menu: 'Settings',
+  play_pause: 'Play / pause', rewind: 'Rewind', ffwd: 'Fast forward', ch_up: 'Channel up', ch_down: 'Channel down' };
+
+let irInfo = { available: false, carriers: [], timing: 'us' };
+let irPrefs = JSON.parse(localStorage.getItem('irPrefs') || '{}');   // { brand, set, timing }
+let remoteMode = localStorage.getItem('remoteMode') || 'wifi';
+let irSetup = null;
+// A computer with a mouse and keyboard (see the Remote page's shortcuts).
+const DESKTOP_KEYS = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+
+function irReady() {
+  return irInfo.available && !!irPrefs.brand && !!irPrefs.set && !!irSetFor(irPrefs.brand, irPrefs.set);
+}
+function irBrand(id) { return HelmIR.BRANDS.find(b => b.id === id); }
+function irSetFor(brandId, setId) {
+  const b = irBrand(brandId);
+  return b ? b.sets.find(s => s.id === setId) : null;
+}
+// Which way a key goes right now: 'ir', 'wifi' or 'none'.
+function routeFor(key) {
+  const wifiKey = !!currentIp && !!REMOTE_KEYS[key];
+  const irKey = irReady() && !!HelmIR.resolve(irPrefs.brand, irPrefs.set, key);
+  // Power over IR whenever possible: it's the only way to turn a TV back on.
+  if (key === 'power' && irKey) return 'ir';
+  // In IR mode, keys the TV's IR codes don't have (Delete, Enter, media
+  // keys on some sets) still go over Wi-Fi when the TV is connected.
+  if (remoteMode === 'ir' && irKey) return 'ir';
+  if (wifiKey) return 'wifi';
+  if (irKey) return 'ir';
+  return 'none';
+}
+
+async function loadIr() {
+  // Only Helm for Android has an IR endpoint. The desktop UI is only ever
+  // opened in a desktop browser, so don't ask (a 404 there is just noise).
+  if (!/Android/.test(navigator.userAgent)) return;
+  try {
+    const res = await fetch(`${API}/ir`);
+    if (!res.ok) throw new Error('no IR');
+    const d = await res.json();
+    irInfo = { available: !!d.available, carriers: d.carriers || [], timing: d.timing || 'us' };
+  } catch (e) {
+    irInfo = { available: false, carriers: [], timing: 'us' };
+  }
+  renderRemote();
+}
+
+async function irSend(brandId, setId, key, timing) {
+  const p = HelmIR.keyPattern(brandId, setId, key, { toggle: 'auto', carriers: irInfo.carriers });
+  if (!p) throw helmError(`Your TV's IR codes don't include ${KEY_NAMES[key] || key}`);
+  const res = await fetch(`${API}/ir`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ frequency: p.frequency, pattern: p.pattern, timing: timing || '' })
+  });
+  const d = await res.json();
+  if (!d.ok) throw helmError(d.error || 'IR send failed');
+}
+
+function flash(el) {
+  if (!el) return;
+  el.classList.add('pressed');
+  setTimeout(() => el.classList.remove('pressed'), 160);
+}
+
+async function press(key, el) {
+  flash(el);
+  const route = routeFor(key);
+  if (route === 'none') {
+    if (irReady()) toast(`Your TV's IR codes don't include ${KEY_NAMES[key] || 'that button'}. Connect over Wi‑Fi to use it.`, 'error');
+    else toast(irInfo.available ? 'Connect to your TV, or set up the IR remote' : 'Connect to your TV first', 'error');
+    return;
+  }
+  try {
+    if (route === 'ir') {
+      await irSend(irPrefs.brand, irPrefs.set, key, irPrefs.timing);
+    } else {
+      const r = await adbRaw(`adb -s ${currentIp}:5555 shell input keyevent ${REMOTE_KEYS[key]}`);
+      if (/not found|offline|unauthorized|no devices|closed/i.test(r.error)) throw helmError("The TV isn't responding. Reconnect on the Devices page.");
+    }
+  } catch (e) {
+    toast(e && e.helm ? e.message : "Couldn't send that", 'error');
+  }
+}
+
+// `input text` takes one argument: spaces become %s, and the whole thing is
+// single-quoted for the TV's shell.
+function tvTextArg(s) {
+  return "'" + s.replace(/ /g, '%s').replace(/'/g, "'\\''") + "'";
+}
+// `input text` also turns a typed "%s" into a space, with no way to escape
+// it, so split the text where one occurs and send the pieces separately:
+// "50%sale" -> "50%", "sale".
+function tvTextChunks(s) {
+  const parts = s.split('%s');
+  return parts.map((p, i) => (i > 0 ? 's' : '') + p + (i < parts.length - 1 ? '%' : '')).filter(p => p);
+}
+async function sendText() {
+  const box = document.getElementById('tv-text');
+  const text = box.value.replace(/[\r\n\t]+/g, ' ');
+  if (!text) return;
+  if (!currentIp) { toast('Typing needs a Wi‑Fi connection to the TV. Connect first.', 'error'); return; }
+  // The TV's `input` command can only type what's on a plain keyboard; one
+  // accented letter or emoji makes it reject the whole text.
+  if (/[^\x20-\x7E]/.test(text)) {
+    toast('Helm can only type plain letters, numbers and symbols, without accents or emoji.', 'error');
+    return;
+  }
+  for (const chunk of tvTextChunks(text)) {
+    const r = await adbRaw(`adb -s ${currentIp}:5555 shell input text ${tvTextArg(chunk)}`);
+    const said = `${r.error || ''} ${r.output || ''}`;
+    if (/exception|error|not found|offline|unauthorized|no devices|closed/i.test(said)) {
+      toast(/not found|offline|unauthorized|no devices|closed/i.test(said)
+        ? "The TV isn't responding. Reconnect on the Devices page."
+        : "The TV couldn't type that.", 'error');
+      return;
+    }
+  }
+  box.value = '';
+  toast('Sent to your TV', 'success');
+}
+
+function setRemoteMode(mode) {
+  remoteMode = mode;
+  localStorage.setItem('remoteMode', mode);
+  renderRemote();
+}
+
+function renderRemote() {
+  const ready = irReady();
+  const seg = document.getElementById('remote-mode');
+  seg.style.display = ready ? '' : 'none';
+  seg.querySelectorAll('button').forEach(b => {
+    if (b.getAttribute('data-mode') === (remoteMode === 'ir' ? 'ir' : 'wifi')) b.classList.add('on'); else b.classList.remove('on');
+  });
+  const viaIr = ready && (remoteMode === 'ir' || !currentIp);
+  const sub = document.getElementById('remote-sub');
+  if (viaIr) {
+    const set = irSetFor(irPrefs.brand, irPrefs.set);
+    sub.textContent = `Sending IR codes for ${irBrand(irPrefs.brand).name} · point this device at the TV`;
+    if (!set) sub.textContent = 'IR remote';
+  } else {
+    sub.textContent = currentIp ? `Controlling ${currentName || currentIp} over Wi‑Fi` : 'Control your TV over Wi‑Fi';
+  }
+  document.querySelectorAll('#remote [data-key]').forEach(b => {
+    if (routeFor(b.getAttribute('data-key')) === 'none' && (currentIp || ready)) b.classList.add('na'); else b.classList.remove('na');
+  });
+  const notice = document.getElementById('remote-notice');
+  if (!currentIp && !ready) {
+    notice.innerHTML = `<div class="notice">${icon('circle-alert')}<span class="grow">${irInfo.available ? 'Connect to your TV over Wi‑Fi, or set up the IR remote below.' : 'Connect to your TV to use the remote.'}</span><button class="btn btn-sm btn-outline" onclick="showPage('devices')">Connect</button></div>`;
+  } else {
+    notice.innerHTML = '';
+  }
+  document.getElementById('shortcut-card').style.display = DESKTOP_KEYS ? '' : 'none';
+  renderIrCard();
+}
+
+// IR setup: pick a brand, then try each of its power codes until the TV reacts.
+function renderIrCard() {
+  const card = document.getElementById('ir-card');
+  if (!irInfo.available) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const title = (chip) => `<div class="card-title-row">${icon('radio')}IR remote${chip}</div>`;
+  if (irSetup && irSetup.step === 'brand') {
+    const hint = (currentName || '').toLowerCase();
+    card.innerHTML = title('') + `
+      <p class="card-sub">Which brand is your TV?</p>
+      <div class="brand-grid">${HelmIR.BRANDS.map(b => {
+        const short = b.name.replace(/\s*\(.*\)$/, '');
+        return `<button class="brand-btn${hint && hint.indexOf(b.id) >= 0 ? ' suggested' : ''}" onclick="irPickBrand('${b.id}')" title="${esc(b.name)}">${esc(short)}</button>`;
+      }).join('')}</div>
+      <div class="btn-row" style="margin-top:10px"><button class="btn btn-sm btn-ghost" onclick="irCancel()">Cancel</button></div>`;
+  } else if (irSetup && irSetup.step === 'test') {
+    const c = irSetup.cands[irSetup.i];
+    card.innerHTML = title('') + `
+      <div class="ir-test">
+        <p class="card-sub">Point this device at your ${esc(irBrand(irSetup.brand).name.replace(/\s*\(.*\)$/, ''))} TV and press the button.</p>
+        <button class="big" onclick="irTestSend(this)" title="Send power">${icon('power')}</button>
+        <div class="count">Code ${irSetup.i + 1} of ${irSetup.cands.length} · ${esc(c.label)}${irSetup.timing ? ' · alternate timing' : ''}</div>
+        ${irSetup.sent ? `
+          <p class="card-sub" style="margin-top:14px;color:var(--text)">Did the TV turn off or on?</p>
+          <div class="btn-row" style="justify-content:center;margin-top:8px">
+            <button class="btn btn-sm" onclick="irWorked()">${icon('check')}Yes, it worked</button>
+            <button class="btn btn-sm btn-outline" onclick="irNext()">No, try the next code</button>
+          </div>` : ''}
+        <div class="btn-row" style="justify-content:center;margin-top:10px"><button class="btn btn-sm btn-ghost" onclick="irCancel()">Cancel</button></div>
+      </div>`;
+  } else if (irSetup && irSetup.step === 'none') {
+    const b = irBrand(irSetup.brand);
+    card.innerHTML = title('') + `
+      <p class="card-sub">None of the ${esc(b.name.replace(/\s*\(.*\)$/, ''))} codes made your TV respond.</p>
+      <div class="btn-row" style="margin-top:12px">
+        ${!irSetup.timing ? `<button class="btn btn-sm" onclick="irRetryTiming()">Try alternate timing</button>` : ''}
+        <button class="btn btn-sm btn-outline" onclick="startIrSetup()">Choose another brand</button>
+        <button class="btn btn-sm btn-ghost" onclick="irCancel()">Cancel</button>
+      </div>
+      <p class="hint">Alternate timing helps on some older Samsung tablets whose IR driver counts differently.</p>`;
+  } else if (irReady()) {
+    const b = irBrand(irPrefs.brand), s = irSetFor(irPrefs.brand, irPrefs.set);
+    card.innerHTML = title('<span class="chip chip-ok">Ready</span>') + `
+      <p class="card-sub">${esc(b.name.replace(/\s*\(.*\)$/, ''))} · ${esc(s.label)}${irPrefs.timing ? ' · alternate timing' : ''}. Power uses IR, so it can turn the TV on too.</p>
+      <div class="btn-row" style="margin-top:12px"><button class="btn btn-sm btn-outline" onclick="startIrSetup()">Change TV</button></div>`;
+  } else {
+    card.innerHTML = title('<span class="chip">Not set up</span>') + `
+      <p class="card-sub">This device has an IR blaster, so it can work your TV like its own remote — including turning it on, which Wi‑Fi can't.</p>
+      <button class="btn btn-block" style="margin-top:14px" onclick="startIrSetup()">${icon('radio')}Set up IR remote</button>`;
+  }
+}
+function startIrSetup() { irSetup = { step: 'brand' }; renderIrCard(); }
+function irCancel() { irSetup = null; renderIrCard(); }
+function irPickBrand(id) {
+  irSetup = { step: 'test', brand: id, cands: HelmIR.powerCandidates(id), i: 0, sent: false, timing: '' };
+  if (!irSetup.cands.length) irSetup.step = 'none';
+  renderIrCard();
+}
+async function irTestSend(el) {
+  flash(el);
+  const setup = irSetup;
+  if (!setup || setup.step !== 'test') return;
+  const c = setup.cands[setup.i];
+  try {
+    await irSend(c.brand, c.set, 'power', setup.timing);
+    if (irSetup !== setup) return;   // cancelled or restarted meanwhile
+    setup.sent = true;
+    renderIrCard();
+  } catch (e) {
+    if (irSetup !== setup) return;
+    toast(e && e.helm ? e.message : 'IR send failed', 'error');
+  }
+}
+function irNext() {
+  irSetup.i++;
+  irSetup.sent = false;
+  if (irSetup.i >= irSetup.cands.length) irSetup.step = 'none';
+  renderIrCard();
+}
+// The first pass uses the timing this Android version should use (see
+// IrBlaster.kt); the alternate is the other one, for IR drivers that differ.
+function irRetryTiming() {
+  const alternate = irInfo.timing === 'cycles' ? 'us' : 'cycles';
+  irSetup = { step: 'test', brand: irSetup.brand, cands: HelmIR.powerCandidates(irSetup.brand), i: 0, sent: false, timing: alternate };
+  renderIrCard();
+}
+function irWorked() {
+  const c = irSetup.cands[irSetup.i];
+  irPrefs = { brand: c.brand, set: c.set, timing: irSetup.timing || '' };
+  localStorage.setItem('irPrefs', JSON.stringify(irPrefs));
+  irSetup = null;
+  if (!currentIp) setRemoteMode('ir'); else renderRemote();
+  toast('IR remote is ready', 'success');
+}
+
+// Keyboard shortcuts on the Remote page, for computers with a mouse and
+// keyboard only. On a TV box the D-pad sends the same arrow and Enter keys,
+// and needs them to move around Helm itself.
+document.addEventListener('keydown', e => {
+  if (!DESKTOP_KEYS) return;
+  if (!document.getElementById('page-remote').classList.contains('active')) return;
+  if (document.body.classList.contains('modal-open')) return;
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.metaKey || e.ctrlKey || e.altKey) return;
+  // Enter and Space press whatever button or link has focus (a tab, Send,
+  // the IR setup buttons). Only on the remote's own keys do they mean OK
+  // and play/pause.
+  const onRemoteKey = tag === 'BUTTON' && e.target.hasAttribute('data-key');
+  if ((e.keyCode === 13 || e.keyCode === 32) && (tag === 'BUTTON' || tag === 'A') && !onRemoteKey) return;
+  const map = { 37: 'left', 38: 'up', 39: 'right', 40: 'down', 13: 'ok', 27: 'back', 8: 'back', 72: 'home', 77: 'mute', 32: 'play_pause',
+    187: 'vol_up', 61: 'vol_up', 107: 'vol_up', 189: 'vol_down', 173: 'vol_down', 109: 'vol_down' };
+  const key = map[e.keyCode];
+  if (!key) return;
+  e.preventDefault();
+  press(key, document.querySelector(`#remote [data-key="${key}"]`));
+});
+
+// ---- start ----
+hydrateIcons();
 applyTheme(currentDeviceType);
-if (currentIp) { document.getElementById('ip-input').value = currentIp; }
+const lastIp = localStorage.getItem('lastIp') || '';
+if (lastIp) document.getElementById('ip-input').value = lastIp;
 renderSavedDevices();
 renderStore();
 renderGuides();
+renderRemote();
+loadIr();
+// Quietly reconnect to the last TV, so opening Helm goes straight to work.
+const lastDevice = savedDevices.find(d => d.ip === lastIp);
+if (lastDevice) quickConnect(lastDevice.ip, lastDevice.name, lastDevice.type, true);
 </script>
 </body>
 </html>

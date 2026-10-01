@@ -6,6 +6,7 @@ import threading
 import shutil
 import os
 import json
+import re
 import urllib.request
 import tempfile
 import webbrowser
@@ -21,19 +22,23 @@ def resource_path(relative_path):
     return os.path.join(BASE_DIR, relative_path)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UI_DIR = os.path.join(BASE_DIR, 'ui')
-CURRENT_VERSION = "1.2.5"
+CURRENT_VERSION = "1.3.0"
 VERSION_URL = "https://raw.githubusercontent.com/264jxz4gk4-wq/helm-releases/main/version.json"
 PORT = 5001
 
 # ── Security: constrain /adb to real adb invocations ────────────────────────
 # The /adb route used to pass any string that did not start with "adb " to
 # subprocess untouched, which made it an arbitrary-command endpoint.
+# Only what Helm's UI sends. The server is reachable from the LAN (Bonjour
+# advertises it), so nothing here may touch this computer's files: no
+# push/pull, no local-path install, no port forwarding.
 ALLOWED_ADB_SUBCOMMANDS = {
-    'connect', 'disconnect', 'reconnect', 'devices', 'shell', 'install',
-    'uninstall', 'pair', 'get-state', 'start-server', 'kill-server',
-    'wait-for-device', 'forward', 'reverse', 'push', 'pull', 'reboot',
-    'root', 'unroot', 'tcpip', 'usb',
+    'connect', 'disconnect', 'devices', 'get-state', 'shell', 'uninstall',
+    'reboot', 'version',
 }
+_IP_RE = re.compile(r'^[0-9]{1,3}(\.[0-9]{1,3}){3}$')
+_PAIR_RE = re.compile(r'^[0-9]{1,3}(\.[0-9]{1,3}){3}:[0-9]{1,5}$')
+_CODE_RE = re.compile(r'^[0-9]{6}$')
 _ADB_FLAGS_WITH_VALUE = {'-s', '-P', '-H', '-L', '-t'}
 
 def validate_adb_command(raw):
@@ -190,8 +195,14 @@ def adb_route():
         except Exception as e:
             return jsonify({'output': '', 'error': str(e)})
     elif 'install_url' in body:
-        url = body['install_url']
-        ip = body['ip']
+        url = str(body.get('install_url') or '')
+        ip = str(body.get('ip') or '')
+        # Store downloads are all https; anything else (file:, ftp:, http:)
+        # could read local files or be swapped in transit.
+        if not url.startswith('https://'):
+            return jsonify({'output': '', 'error': 'only https downloads are allowed'}), 400
+        if not _IP_RE.match(ip):
+            return jsonify({'output': '', 'error': 'invalid ip'}), 400
         try:
             tmp = tempfile.NamedTemporaryFile(suffix='.apk', delete=False)
             # Follow redirects (needed for mirror-based URLs like mirrors.kodi.tv)
@@ -259,6 +270,11 @@ def pair_route():
 
     if not pair_address or not code:
         return jsonify({'success': False, 'error': 'pair_address and code required'})
+    pair_address, code = str(pair_address).strip(), str(code).strip()
+    if not _PAIR_RE.match(pair_address):
+        return jsonify({'success': False, 'error': 'pair_address must look like 192.168.1.45:37829'}), 400
+    if not _CODE_RE.match(code):
+        return jsonify({'success': False, 'error': 'code must be the 6 digits shown on the TV'}), 400
 
     ip = pair_address.split(':')[0]
 
@@ -311,13 +327,31 @@ def block_dns_rebinding():
     # so allow any IP and reject names. This also avoids breaking users on
     # unusual LAN ranges (Tailscale's 100.x, and so on).
     host = (request.host or '').split(':')[0].strip('[]')
-    if host in ('localhost', '::1'):
-        return None
-    try:
-        ipaddress.ip_address(host)
-        return None
-    except ValueError:
-        return jsonify({'error': 'invalid Host header'}), 403
+    if host not in ('localhost', '::1'):
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            return jsonify({'error': 'invalid Host header'}), 403
+    if request.method == 'POST':
+        refused = post_refused()
+        if refused:
+            return jsonify({'error': refused}), 403
+    return None
+
+def post_refused():
+    """Why a POST must be refused, or None.
+
+    A web page can send a "simple" cross-site POST (a form, or text/plain)
+    without a CORS preflight, so requests must say they are JSON, which a
+    cross-site page can only do after a preflight we never answer. And when
+    a browser names the page that sent it (Origin), it must be our own page.
+    """
+    if not request.is_json:
+        return 'requests must be JSON'
+    origin = request.headers.get('Origin')
+    if origin is not None and origin.rstrip('/') != request.host_url.rstrip('/'):
+        return 'cross-origin request refused'
+    return None
 
 class HelmServer(rumps.App):
     def __init__(self):

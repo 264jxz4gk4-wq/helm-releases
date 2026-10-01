@@ -2,25 +2,27 @@
 # Download the adb binaries bundled in Helm for Android, verify them against
 # pinned SHA-256 checksums, and put them where Gradle packages them.
 #
-# Source: lzhiyong/android-sdk-tools 35.0.2 - adb built from AOSP with the
-# Android NDK, statically linked against bionic (no shared-library
-# dependencies). Checked before pinning:
-#   arm:     ELF32 ARM, ARMv7-A + VFPv3 + NEON, static, no interpreter
-#   aarch64: ELF64 AArch64, static, no interpreter
+#   armeabi-v7a  lzhiyong/android-sdk-tools 35.0.2 (android-sdk-tools-static-arm.zip):
+#                adb built from AOSP with the NDK, static, ARMv7-A + VFPv3 + NEON.
+#                Proven on Android 4.4 (Galaxy Tab 3).
+#   arm64-v8a    Helm's own build, release adb-35.0.2-16k-8 on this repo, made by
+#                .github/workflows/build-adb.yml from tools/build-adb.sh: the same
+#                AOSP sources and recipe, built with NDK r27c so it also runs on
+#                phones with 16 KB memory pages. Static, no interpreter.
 #
-# If upstream ever changes a file, the checksum fails and this script stops.
-# That is the point: we never ship a binary nobody looked at.
+# If a file ever changes, the checksum fails and this script stops. That is
+# the point: we never ship a binary nobody looked at. See ADB_BINARY.md.
 #
 # Usage (from HelmAndroid/):  bash tools/fetch-adb.sh
 set -euo pipefail
 
-VERSION="35.0.2"
-BASE="https://github.com/lzhiyong/android-sdk-tools/releases/download/${VERSION}"
+LZY="https://github.com/lzhiyong/android-sdk-tools/releases/download/35.0.2"
+HELM="https://github.com/264jxz4gk4-wq/helm-releases/releases/download/adb-35.0.2-16k-8"
 
-# abi-dir | release-arch | sha256 of the extracted adb binary
+# abi-dir | download URL | file inside the zip ("" if the URL is the binary) | sha256 of adb
 TARGETS=(
-  "armeabi-v7a|arm|3e63e36500259c2044e08632fe56552300d8e22e3bcd8f083d74a7f2c8ae6ec1"
-  "arm64-v8a|aarch64|da34ede1747352d93aff56e5132a943c0f67a5c5b3d0896ea77d3eb315923f1b"
+  "armeabi-v7a|$LZY/android-sdk-tools-static-arm.zip|platform-tools/adb|3e63e36500259c2044e08632fe56552300d8e22e3bcd8f083d74a7f2c8ae6ec1"
+  "arm64-v8a|$HELM/adb-arm64-v8a||02c97d5ed8d90becff5ce43e09fa0117237f4e9b469621281b9da07db8c28517"
 )
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
@@ -33,7 +35,7 @@ sha256() {
 }
 
 for t in "${TARGETS[@]}"; do
-  IFS='|' read -r abi arch want <<<"$t"
+  IFS='|' read -r abi url member want <<<"$t"
   dest="$here/app/src/main/jniLibs/$abi/libadb.so"
 
   if [[ -f "$dest" && "$(sha256 "$dest")" == "$want" ]]; then
@@ -41,11 +43,18 @@ for t in "${TARGETS[@]}"; do
     continue
   fi
 
-  echo "fetch   $abi <- android-sdk-tools-static-$arch.zip"
-  curl -fsSL --retry 3 -o "$work/$arch.zip" "$BASE/android-sdk-tools-static-$arch.zip"
-  unzip -q -o -j "$work/$arch.zip" platform-tools/adb -d "$work/$arch"
+  echo "fetch   $abi <- $url"
+  mkdir -p "$work/$abi"
+  if [[ -n "$member" ]]; then
+    curl -fsSL --retry 3 -o "$work/$abi/download.zip" "$url"
+    unzip -q -o -j "$work/$abi/download.zip" "$member" -d "$work/$abi"
+    bin="$work/$abi/$(basename "$member")"
+  else
+    bin="$work/$abi/adb"
+    curl -fsSL --retry 3 -o "$bin" "$url"
+  fi
 
-  got="$(sha256 "$work/$arch/adb")"
+  got="$(sha256 "$bin")"
   if [[ "$got" != "$want" ]]; then
     echo "FAILED  $abi checksum mismatch" >&2
     echo "        expected $want" >&2
@@ -54,7 +63,7 @@ for t in "${TARGETS[@]}"; do
   fi
 
   mkdir -p "$(dirname "$dest")"
-  cp "$work/$arch/adb" "$dest"
+  cp "$bin" "$dest"
   chmod 755 "$dest"
   echo "ok      $abi (sha256 verified)"
 done

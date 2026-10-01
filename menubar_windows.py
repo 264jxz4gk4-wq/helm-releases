@@ -4,6 +4,8 @@ import subprocess
 import ipaddress
 import os
 import sys
+import socket
+import concurrent.futures
 import requests
 from flask import Flask, request, jsonify, send_from_directory
 from PIL import Image, ImageDraw
@@ -27,6 +29,19 @@ def get_ui_dir():
     return resource('ui')
 
 ADB = None  # resolved lazily
+
+# Helm is a windowed app, so every console program it starts (adb.exe) would
+# get a console window of its own, flashing up on each action. Ask Windows
+# not to create one. subprocess.run goes through Popen, so this covers it.
+if sys.platform == 'win32':
+    _CREATE_NO_WINDOW = 0x08000000
+
+    class _QuietPopen(subprocess.Popen):
+        def __init__(self, *args, **kwargs):
+            kwargs.setdefault('creationflags', _CREATE_NO_WINDOW)
+            super().__init__(*args, **kwargs)
+
+    subprocess.Popen = _QuietPopen
 UI_DIR = None  # resolved lazily
 
 # ── Flask ───────────────────────────────────────────────────────────────────
@@ -36,11 +51,12 @@ UI_DIR = None  # resolved lazily
 # strings interpolated in, so /adb was a remote shell for anyone on the LAN.
 import re as _re
 
+# Only what Helm's UI sends. The server is reachable from the LAN, so nothing
+# here may touch this computer's files: no push/pull, no local-path install,
+# no port forwarding.
 ALLOWED_ADB_SUBCOMMANDS = {
-    'connect', 'disconnect', 'reconnect', 'devices', 'shell', 'install',
-    'uninstall', 'pair', 'get-state', 'start-server', 'kill-server',
-    'wait-for-device', 'forward', 'reverse', 'push', 'pull', 'reboot',
-    'root', 'unroot', 'tcpip', 'usb',
+    'connect', 'disconnect', 'devices', 'get-state', 'shell', 'uninstall',
+    'reboot', 'version',
 }
 _ADB_FLAGS_WITH_VALUE = {'-s', '-P', '-H', '-L', '-t'}
 _IP_RE = _re.compile(r'^[0-9]{1,3}(\.[0-9]{1,3}){3}$')
@@ -101,13 +117,31 @@ def block_dns_rebinding():
     # so allow any IP and reject names. This also avoids breaking users on
     # unusual LAN ranges (Tailscale's 100.x, and so on).
     host = (request.host or '').split(':')[0].strip('[]')
-    if host in ('localhost', '::1'):
-        return None
-    try:
-        ipaddress.ip_address(host)
-        return None
-    except ValueError:
-        return jsonify({'error': 'invalid Host header'}), 403
+    if host not in ('localhost', '::1'):
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            return jsonify({'error': 'invalid Host header'}), 403
+    if request.method == 'POST':
+        refused = post_refused()
+        if refused:
+            return jsonify({'error': refused}), 403
+    return None
+
+def post_refused():
+    """Why a POST must be refused, or None.
+
+    A web page can send a "simple" cross-site POST (a form, or text/plain)
+    without a CORS preflight, so requests must say they are JSON, which a
+    cross-site page can only do after a preflight we never answer. And when
+    a browser names the page that sent it (Origin), it must be our own page.
+    """
+    if not request.is_json:
+        return 'requests must be JSON'
+    origin = request.headers.get('Origin')
+    if origin is not None and origin.rstrip('/') != request.host_url.rstrip('/'):
+        return 'cross-origin request refused'
+    return None
 
 @app.route('/')
 def index():
@@ -121,13 +155,17 @@ def adb_route():
     command = data.get('command', '')
     install_url = data.get('install_url', '')
     if install_url:
+        # Store downloads are all https; anything else (file:, ftp:, http:)
+        # could read local files or be swapped in transit.
+        if not str(install_url).startswith('https://'):
+            return jsonify({'output': '', 'error': 'only https downloads are allowed'}), 400
+        safe = safe_ip(ip)
+        if not safe:
+            return jsonify({'output': '', 'error': 'invalid ip'}), 400
         try:
             import tempfile, urllib.request
             with tempfile.NamedTemporaryFile(suffix='.apk', delete=False) as f:
                 tmp = f.name
-            safe = safe_ip(ip)
-            if not safe:
-                return jsonify({'output': '', 'error': 'invalid ip'}), 400
             # TLS verification stays ON. Disabling it let anyone on the path
             # swap the APK being installed on the user's TV.
             with urllib.request.urlopen(install_url, timeout=120) as u, open(tmp, "wb") as out:
@@ -245,6 +283,52 @@ def pair_route():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+def _local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('8.8.8.8', 80))   # no packet is sent; this picks the LAN interface
+        return s.getsockname()[0]
+    except Exception:
+        return '192.168.1.1'
+    finally:
+        s.close()
+
+@app.route('/scan-network', methods=['GET'])
+def scan_network_route():
+    """Find TVs with network debugging on in this computer's /24.
+
+    Checks port 5555 with a plain socket first, so adb only runs for the few
+    addresses that answer, not all 254.
+    """
+    subnet = '.'.join(_local_ip().split('.')[:3])
+
+    def port_open(n):
+        ip = f'{subnet}.{n}'
+        try:
+            with socket.create_connection((ip, 5555), timeout=0.6):
+                return ip
+        except OSError:
+            return None
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=64) as ex:
+        candidates = [ip for ip in ex.map(port_open, range(1, 255)) if ip]
+
+    def identify(ip):
+        try:
+            r = subprocess.run([get_adb(), 'connect', f'{ip}:5555'],
+                               capture_output=True, text=True, timeout=5)
+            if 'connected to' not in r.stdout.lower():
+                return None
+            m = subprocess.run([get_adb(), '-s', f'{ip}:5555', 'shell', 'getprop', 'ro.product.model'],
+                               capture_output=True, text=True, timeout=4)
+            return {'ip': ip, 'model': m.stdout.strip() or 'Unknown device'}
+        except Exception:
+            return None
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+        found = [d for d in ex.map(identify, candidates) if d]
+    return jsonify({'devices': found, 'subnet': subnet})
+
 @app.route('/version')
 def version():
     return jsonify({'version': '1.0.0'})
@@ -281,7 +365,7 @@ def make_icon():
 def open_ui(icon, item):
     webbrowser.open('http://localhost:5001')
 
-CURRENT_VERSION = '1.2.5'
+CURRENT_VERSION = '1.3.0'
 
 def do_update(download_url, icon):
     try:

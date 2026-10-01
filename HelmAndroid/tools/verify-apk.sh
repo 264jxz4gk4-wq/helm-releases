@@ -60,6 +60,33 @@ done
 grep -q "lib/armeabi-v7a/libconscrypt_jni.so" "$work/list.txt" \
   && ok "Conscrypt TLS bundled (Android 4.4 downloads)" || bad "Conscrypt native library missing for armeabi-v7a"
 
+# Phones with 16 KB memory pages (an Android 15+ option) need every 64-bit
+# native file laid out for them: LOAD segments 16 KB-aligned, and no 16 KB
+# page shared by segments with different permissions.
+check_16k() {
+  python3 - "$1" <<'PY'
+import subprocess, sys
+PAGE = 0x4000
+out = subprocess.run(["readelf", "-lW", sys.argv[1]], capture_output=True, text=True).stdout
+segs, ok = [], True
+for r in (l.split() for l in out.splitlines() if l.strip().startswith("LOAD")):
+    off, vaddr, memsz, align = int(r[1], 16), int(r[2], 16), int(r[5], 16), int(r[-1], 16)
+    if align % PAGE or off % PAGE != vaddr % PAGE:
+        ok = False
+    segs.append((vaddr, vaddr + memsz, "".join(r[6:-1])))
+for (a0, a1, f1), (b0, b1, f2) in zip(segs, segs[1:]):
+    if f1 != f2 and (a1 - 1) // PAGE >= b0 // PAGE:
+        ok = False
+sys.exit(0 if ok and segs else 1)
+PY
+}
+libs64="$(grep -oE "lib/arm64-v8a/[^ ]+\.so" "$work/list.txt" | sort -u)"
+[ -n "$libs64" ] || bad "no 64-bit native files in the APK"
+for so in $libs64; do
+  unzip -p "$APK" "$so" > "$work/lib.so"
+  check_16k "$work/lib.so" && ok "16 KB pages: $so" || bad "$so is not laid out for 16 KB memory pages"
+done
+
 sha="$(sha256sum "$APK" | cut -d' ' -f1)"
 pkg="$(grep -m1 '^package:' "$work/badging.txt" | sed -E "s/.*versionName='([^']*)'.*/\1/")"
 size="$(( $(stat -c%s "$APK") / 1024 ))"

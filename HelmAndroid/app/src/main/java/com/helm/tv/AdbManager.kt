@@ -38,12 +38,14 @@ class AdbManager(private val context: Context) {
         /** Non-default port, so we never collide with any other adb server. */
         private const val ADB_SERVER_PORT = "5039"
 
-        /** Mirrors the allowlist in menubar.py / menubar_windows.py. */
+        /**
+         * What /adb may run: only what Helm's UI sends. Mirrors the allowlist
+         * in menubar.py / menubar_windows.py. Nothing that touches this
+         * device's files (push/pull, local-path install) or opens ports.
+         */
         val ALLOWED_SUBCOMMANDS = setOf(
-            "connect", "disconnect", "reconnect", "devices", "shell", "install",
-            "uninstall", "pair", "get-state", "start-server", "kill-server",
-            "wait-for-device", "forward", "reverse", "push", "pull", "reboot",
-            "root", "unroot", "tcpip", "usb", "version",
+            "connect", "disconnect", "devices", "get-state", "shell", "uninstall",
+            "reboot", "version",
         )
         private val FLAGS_WITH_VALUE = setOf("-s", "-P", "-H", "-L", "-t")
     }

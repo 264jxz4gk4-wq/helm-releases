@@ -6,13 +6,36 @@ verifies it against pinned SHA-256 checksums; it is not committed to git.
 
 ## Source
 
-[lzhiyong/android-sdk-tools](https://github.com/lzhiyong/android-sdk-tools)
-release **35.0.2** - AOSP adb built with the Android NDK.
+Both are AOSP adb **35.0.2** (`platform-tools-35.0.2`), built with the
+Android NDK and statically linked.
 
-| ABI | Release file | SHA-256 of `adb` |
-|---|---|---|
-| `armeabi-v7a` | `android-sdk-tools-static-arm.zip` | `3e63e36500259c2044e08632fe56552300d8e22e3bcd8f083d74a7f2c8ae6ec1` |
-| `arm64-v8a` | `android-sdk-tools-static-aarch64.zip` | `da34ede1747352d93aff56e5132a943c0f67a5c5b3d0896ea77d3eb315923f1b` |
+| ABI | Built by | Download | SHA-256 of `adb` |
+|---|---|---|---|
+| `armeabi-v7a` | [lzhiyong/android-sdk-tools](https://github.com/lzhiyong/android-sdk-tools) 35.0.2 | `android-sdk-tools-static-arm.zip` | `3e63e36500259c2044e08632fe56552300d8e22e3bcd8f083d74a7f2c8ae6ec1` |
+| `arm64-v8a` | this repo: `tools/build-adb.sh`, run by `.github/workflows/build-adb.yml` | release [`adb-35.0.2-16k-8`](https://github.com/264jxz4gk4-wq/helm-releases/releases/tag/adb-35.0.2-16k-8) | `02c97d5ed8d90becff5ce43e09fa0117237f4e9b469621281b9da07db8c28517` |
+
+### Why the 64-bit adb is our own build
+
+Some newer phones run Android with 16 KB memory pages instead of 4 KB (an
+Android 15+ option). lzhiyong's 64-bit adb can't run on them: its code and
+data share 16 KB pages, and its static C library comes from an NDK that
+assumed 4 KB pages. Neither can be patched in the file.
+
+`tools/build-adb.sh` rebuilds it from the same AOSP sources with lzhiyong's
+CMake recipe and patches, but with NDK r27c (whose C library supports 16 KB
+pages), flexible page sizes and `-z max-page-size=16384`. It refuses to
+publish unless the result is static, aarch64, 16 KB-aligned with no page
+shared between segments of different permissions, runs (under qemu, also
+with 16 KB pages) and includes pairing support. `adb version` reports
+`Android Debug Bridge version 1.0.41`, `Version 35.0.3-`.
+
+The 32-bit adb stays lzhiyong's: 16 KB pages exist only on 64-bit devices,
+and that binary is proven on Android 4.4 (Galaxy Tab 3).
+
+`tools/verify-apk.sh` checks every 64-bit native file in each release APK for
+the 16 KB layout. Conscrypt's 64-bit library is left out of the APK (it is
+only used on Android 4.4, which never runs on 64-bit devices), so 64-bit
+Helm ships adb alone.
 
 ## What was checked before pinning
 
@@ -49,9 +72,13 @@ appears in logcat as `HelmService: bundled adb: exit=0 ...`.
 
 ## Updating it
 
-Pick a new release, download both zips, extract `platform-tools/adb`, repeat
-the checks above (`file`, `readelf -d`, `readelf -A`), then update `VERSION`
-and both checksums in `tools/fetch-adb.sh` and the table above.
+32-bit: pick a new lzhiyong release, extract `platform-tools/adb` from the
+arm zip, repeat the checks above (`file`, `readelf -d`, `readelf -A`), then
+update the URL and checksum in `tools/fetch-adb.sh` and the table above.
+
+64-bit: change the tags at the top of `tools/build-adb.sh`, run the "Build adb
+for Android" workflow (Actions tab, or the API), and pin the new release's
+URL and the checksum it reports in `tools/fetch-adb.sh` and the table above.
 
 ## Licence
 

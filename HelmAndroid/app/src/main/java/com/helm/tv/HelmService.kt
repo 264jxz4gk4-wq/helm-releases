@@ -62,6 +62,7 @@ class HelmService : Service() {
                 android.system.Os.sysconf(android.system.OsConstants._SC_PAGESIZE) else 4096L
             Log.i(TAG, "device: Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT}), " +
                 "${System.getProperty("os.arch")}, page size $pageSize")
+            Log.i(TAG, "IR blaster: ${IrBlaster.status(this)}")
             val v = adb.version()
             Log.i(TAG, "bundled adb: exit=${v.exitCode} ${v.combined.lineSequence().firstOrNull()}")
             if (adb.isAvailable) {

@@ -75,6 +75,11 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
+            // Conscrypt is only used on Android 4.4 (see Tls.kt), and no 64-bit
+            // device runs Android older than 5.0, so its 64-bit library is dead
+            // weight - and, built for 4 KB pages, it would get Helm flagged as
+            // not 16 KB-compatible on newer phones. 64-bit ships only adb.
+            excludes += "**/arm64-v8a/libconscrypt_jni.so"
         }
     }
 

@@ -21,6 +21,8 @@ import java.net.InetAddress
  *  - no CORS headers: the only client is our WebView on the same origin
  *  - Host header must be an IP literal or localhost, which stops DNS
  *    rebinding from a web page open in the tablet's browser
+ *  - POSTs must be JSON and, if the browser says, from our own page, which
+ *    stops cross-site form posts from a web page
  *  - /adb only ever runs the bundled adb, with an allowlisted subcommand
  */
 class HelmServer(
@@ -38,6 +40,11 @@ class HelmServer(
     override fun serve(session: IHTTPSession): Response {
         if (!hostAllowed(session.headers["host"])) {
             return json(JSONObject().put("error", "invalid Host header"), Response.Status.FORBIDDEN)
+        }
+        if (session.method == Method.POST) {
+            postRefused(session.headers)?.let {
+                return json(JSONObject().put("error", it), Response.Status.FORBIDDEN)
+            }
         }
         return try {
             when {
@@ -62,6 +69,11 @@ class HelmServer(
                 session.method == Method.POST && session.uri == "/adb" -> handleAdb(readJson(session))
                 session.method == Method.POST && session.uri == "/pair" -> handlePair(readJson(session))
                 session.method == Method.GET && session.uri == "/scan-network" -> handleScan()
+
+                // IR blaster. Android only: the UI asks only when it's running
+                // in an Android WebView.
+                session.method == Method.GET && session.uri == "/ir" -> json(IrBlaster.status(context))
+                session.method == Method.POST && session.uri == "/ir" -> handleIr(readJson(session))
 
                 session.method == Method.GET -> {
                     val rel = session.uri.trimStart('/')
@@ -113,6 +125,16 @@ class HelmServer(
         return json(out)
     }
 
+    private fun handleIr(body: JSONObject?): Response {
+        val arr = body?.optJSONArray("pattern")
+        if (body == null || arr == null) {
+            return json(JSONObject().put("ok", false).put("error", "invalid JSON body"), Response.Status.BAD_REQUEST)
+        }
+        val pattern = IntArray(arr.length()) { arr.optInt(it, 0) }
+        val error = IrBlaster.transmit(context, body.optInt("frequency", 0), pattern, body.optString("timing").ifBlank { null })
+        return json(if (error == null) JSONObject().put("ok", true) else JSONObject().put("ok", false).put("error", error))
+    }
+
     private fun handleScan(): Response {
         val subnet = localSubnet()
         val arr = JSONArray()
@@ -147,6 +169,23 @@ class HelmServer(
         if (Regex("^[0-9]{1,3}(\\.[0-9]{1,3}){3}$").matches(host)) return true
         if (host.contains(':') && Regex("^[0-9a-fA-F:]+$").matches(host)) return true // IPv6 literal
         return false
+    }
+
+    /**
+     * Why a POST must be refused, or null. A web page open in the device's
+     * browser can send a "simple" cross-site POST (a form, or text/plain)
+     * without a CORS preflight, so requests must say they are JSON - which a
+     * cross-site page can only do after a preflight we never answer - and,
+     * when the browser names the sending page (Origin), come from our own.
+     * NanoHTTPD lower-cases header names.
+     */
+    private fun postRefused(headers: Map<String, String>): String? {
+        val type = headers["content-type"]?.substringBefore(';')?.trim()?.lowercase()
+        if (type != JSON) return "requests must be JSON"
+        val origin = headers["origin"]?.trimEnd('/') ?: return null
+        val port = listeningPort
+        return if (origin == "http://localhost:$port" || origin == "http://127.0.0.1:$port") null
+        else "cross-origin request refused"
     }
 
     /** Reads the request body directly; NanoHTTPD's parseBody is form-oriented. */

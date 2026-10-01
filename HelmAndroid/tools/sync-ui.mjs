@@ -27,6 +27,7 @@ import { fileURLToPath } from "node:url";
 import { transformSync } from "esbuild";
 import * as acorn from "acorn";
 import { buildLegacy } from "./legacy.mjs";
+import { inlineStatus } from "./ir/inline.mjs";
 
 // chrome51 is the floor: the UI uses destructuring inside for...of, which
 // esbuild can't lower any further. It matches the WebView Android 7.0
@@ -60,6 +61,14 @@ const POLYFILLS = `
 // ---------------------------------------------------------------------------
 
 const html = readFileSync(SRC, "utf8");
+
+// The IR library is edited and verified in tools/ir/ir.js and carried inline
+// in the UI; refuse to ship a UI whose copy is stale.
+{
+  const ir = inlineStatus();
+  if (!ir.found) fail("ui/index.html has no HelmIR block");
+  if (!ir.current) fail("ui/index.html's HelmIR block differs from tools/ir/ir.js (run node tools/ir/inline.mjs)");
+}
 
 // The Android server listens on this exact origin. If the UI ever changes it,
 // the APK would load a UI that talks to nothing - fail the build instead.

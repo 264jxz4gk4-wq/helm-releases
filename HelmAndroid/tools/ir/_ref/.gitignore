@@ -1,0 +1,11 @@
+# Everything fetch_refs.sh downloads or builds. Only the scripts and the
+# small driver sources in this folder are kept in git.
+/flipper-irdb/
+/fz/
+/irdb/
+/irpt/
+/deb/
+/babel/node_modules/
+/babel/package-lock.json
+/fzhost/fzhost
+/irpref/*.class

@@ -1,7 +1,7 @@
 {
-  "version": "1.2.5",
-  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.5/HelmMac.zip",
-  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.5/HelmWindows.zip",
-  "notes": "VLC now installs on 32-bit TVs; updated SmartTube, Jellyfin, NewPipe, Projectivy and RetroArch",
-  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.2.5/Helm.apk"
+  "version": "1.3.0",
+  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.0/HelmMac.zip",
+  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.0/HelmWindows.zip",
+  "notes": "New look, a TV remote with IR support, six new Store apps, support for the newest phones, and security fixes",
+  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.0/Helm.apk"
 }

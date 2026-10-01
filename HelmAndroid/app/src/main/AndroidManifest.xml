@@ -13,10 +13,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- The Remote page can use an IR blaster if the device has one. -->
+    <uses-permission android:name="android.permission.TRANSMIT_IR" />
+
     <!-- Runs on phones, tablets and TV boxes alike. -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.wifi" android:required="false" />
+    <uses-feature android:name="android.hardware.consumerir" android:required="false" />
 
     <application
         android:allowBackup="false"

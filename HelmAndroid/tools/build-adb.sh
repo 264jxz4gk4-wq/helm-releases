@@ -42,8 +42,13 @@ phase() {
     return 0
   fi
   tail -n 80 "$log"; echo "::endgroup::"
-  local tailtext; tailtext="$(grep -v '^\s*$' "$log" | tail -n 25 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
-  echo "::error title=$name failed::$tailtext"
+  # The first error lines say why; the tail says where it stopped. Both go in
+  # the annotation, which is readable on the run page without log access.
+  local errs tailtext
+  errs="$(grep -E -m 12 'error:|Error:|FAILED:|fatal|No such file|not found' "$log" | cut -c1-300)"
+  tailtext="$(grep -v '^\s*$' "$log" | tail -n 12 | cut -c1-300)"
+  printf '%s\n--- last lines ---\n%s\n' "$errs" "$tailtext" | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}' > "$LOGS/annotation.txt"
+  echo "::error title=$name failed::$(cat "$LOGS/annotation.txt")"
   echo "- ❌ $name failed" >> "$SUMMARY"
   exit 1
 }
@@ -53,8 +58,14 @@ SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
 NDK="$SDK/ndk/$NDK_VERSION"
 
 install_ndk() {
-  [ -d "$NDK" ] && { echo "NDK $NDK_VERSION already installed"; return 0; }
-  yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION"
+  if [ ! -f "$NDK/source.properties" ]; then
+    # Not `yes | sdkmanager` under pipefail: `yes` dies of SIGPIPE when
+    # sdkmanager exits, which fails the pipeline even when the install worked.
+    # sdkmanager redraws its progress bar with \r; turn those into lines.
+    printf 'y\ny\ny\ny\ny\n' | "$SDK/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK_VERSION" 2>&1 | tr '\r' '\n' | grep -v '^\s*$' | tail -n 40
+  fi
+  [ -f "$NDK/source.properties" ] || { echo "NDK $NDK_VERSION not installed; have: $(ls "$SDK/ndk" 2>&1)"; return 1; }
+  grep Pkg.Revision "$NDK/source.properties"
 }
 host_tools() {
   sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build cmake qemu-user-static
@@ -63,6 +74,34 @@ get_sources() {
   git clone -c advice.detachedHead=false --depth 1 --branch "$LZY_TAG" \
     https://github.com/lzhiyong/android-sdk-tools.git "$WORK/sdk-tools" &&
   cd "$WORK/sdk-tools" && python3 get_source.py --tags "$AOSP_TAG"
+}
+# The recipe ships patches that get_source.py doesn't apply ("we may need to
+# patch manually"). adb needs two: protobuf's CMake include paths (without it
+# the host protoc fails on a missing config.h) and openscreen's task runner
+# (adb's mDNS code). The rest are for aapt2/dexdump.
+apply_patches() {
+  cd "$WORK/sdk-tools" || return 1
+  local p=protobuf_CMakeLists.txt.patch
+  echo "== $p"
+  if patch -p1 --forward --batch --dry-run < "patches/$p" >/dev/null 2>&1; then
+    patch -p1 --forward --batch < "patches/$p" || return 1
+  elif patch -p1 --reverse --batch --dry-run < "patches/$p" >/dev/null 2>&1; then
+    echo "already applied"
+  else
+    echo "does not apply:"; patch -p1 --forward --batch --dry-run < "patches/$p"; return 1
+  fi
+
+  # task_runner.h.patch was made for an older openscreen and no longer
+  # applies as a diff. What it does: make Task a plain
+  # std::packaged_task<void()>, since the noexcept variant doesn't compile with
+  # the NDK's libc++ under -fno-exceptions. Do that by content instead.
+  local f=src/openscreen/platform/api/task_runner.h
+  echo "== $f"
+  [ -f "$f" ] || { echo "missing"; return 1; }
+  sed -i 's/std::packaged_task<void() noexcept>/std::packaged_task<void()>/g' "$f" || return 1
+  grep -n "packaged_task" "$f"
+  # (A comment in the file quotes the old error text, so match the declaration.)
+  if grep -c "Task = std::packaged_task<void() noexcept>" "$f" >/dev/null; then echo "noexcept Task still present"; return 1; fi
 }
 host_protoc() {
   cd "$WORK/sdk-tools" &&
@@ -74,8 +113,16 @@ configure() {
   protoc="$(find "$WORK/sdk-tools/build-protoc" -maxdepth 1 -type f -name 'protoc*' -perm -u+x | head -1)"
   [ -n "$protoc" ] || { echo "host protoc not found"; return 1; }
   echo "host protoc: $protoc"
+  # A static adb needs static zlib. Left to itself, protobuf's CMake finds the
+  # NDK's libz.so (find_package(ZLIB)) and passes it by full path, which the
+  # final static link rejects ("attempted static link of dynamic object").
+  # The NDK also ships libz.a, one directory up from the per-API libraries.
+  local zlib="$NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libz.a"
+  [ -f "$zlib" ] || { echo "static zlib not found at $zlib"; ls "$(dirname "$zlib")"; return 1; }
+  echo "static zlib: $zlib"
   cd "$WORK/sdk-tools" &&
   cmake -GNinja -B build-arm64 \
+    -DZLIB_LIBRARY="$zlib" -Dprotobuf_WITH_ZLIB=OFF \
     -DANDROID_NDK="$NDK" \
     -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
     -DANDROID_PLATFORM="android-$API" \
@@ -85,7 +132,28 @@ configure() {
     -DCMAKE_BUILD_TYPE=Release \
     -DPROTOC_PATH="$protoc" \
     -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
-    -DCMAKE_EXE_LINKER_FLAGS="-static -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384"
+    -DCMAKE_EXE_LINKER_FLAGS="-static -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384" ||
+    return 1
+  # Fail now, not after a half-hour compile, if adb's link line still names a
+  # shared library.
+  python3 - build-arm64/build.ninja <<'EOF'
+import re, sys
+lines = open(sys.argv[1]).read().split("\n")
+start = next((i for i, l in enumerate(lines) if re.match(r"build \S*bin/adb:", l)), None)
+if start is None:
+    sys.exit("adb link step not found in build.ninja")
+block = []
+for l in lines[start:]:
+    if not l.strip():
+        break
+    block.append(l)
+libs = " ".join(l for l in block if "LINK_LIBRARIES" in l or l.startswith("build "))
+shared = sorted(set(re.findall(r"\S+\.so(?:\.\d+)*\b", libs)))
+print("adb links:", " ".join(t for t in libs.split() if t.endswith((".a", ".so")) or t.startswith("-l"))[:1500])
+if shared:
+    sys.exit("adb would link shared libraries: " + " ".join(shared))
+print("adb link line: static libraries only")
+EOF
 }
 build_adb() {
   cd "$WORK/sdk-tools" && ninja -C build-arm64 adb
@@ -102,9 +170,11 @@ collect() {
 # Refuse to publish anything that isn't exactly what we need.
 verify() {
   local f="$OUT/adb-$ABI"
+  # grep -c, not grep -q: under pipefail, -q exiting at the first match can
+  # kill the writer with SIGPIPE and turn a match into a failure.
   file "$f"
-  file "$f" | grep -q "ARM aarch64" || { echo "not an aarch64 binary"; return 1; }
-  if readelf -d "$f" 2>/dev/null | grep -q NEEDED; then echo "dynamically linked; must be static"; return 1; fi
+  file "$f" | grep -c "ARM aarch64" >/dev/null || { echo "not an aarch64 binary"; return 1; }
+  if readelf -d "$f" 2>/dev/null | grep -c NEEDED >/dev/null; then echo "dynamically linked; must be static"; return 1; fi
   python3 - "$f" <<'EOF' || return 1
 import subprocess, sys
 PAGE = 0x4000
@@ -129,7 +199,7 @@ EOF
   echo "--- runs (under qemu) ---"
   qemu-aarch64-static "$f" version | tee "$LOGS/version.txt"
   grep -q "Android Debug Bridge version" "$LOGS/version.txt" || { echo "binary did not run"; return 1; }
-  strings "$f" | grep -q "SPAKE2" || { echo "pairing (SPAKE2) support missing"; return 1; }
+  strings "$f" | grep -c "SPAKE2" >/dev/null || { echo "pairing (SPAKE2) support missing"; return 1; }
   echo "pairing support: present"
 }
 
@@ -153,6 +223,7 @@ describe() {
 phase "Install NDK $NDK_VERSION" install_ndk
 phase "Host tools" host_tools
 phase "Fetch AOSP sources" get_sources
+phase "Apply recipe patches" apply_patches
 phase "Build host protoc" host_protoc
 phase "Configure" configure
 phase "Build adb" build_adb
