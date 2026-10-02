@@ -47,6 +47,7 @@
   .logo { display: flex; align-items: center; padding: 2px 8px 24px; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
   .logo-mark { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(150deg, #1C2436, #0B0F18); border: 1px solid var(--line-2); color: var(--primary); margin-right: 11px; box-shadow: 0 6px 16px rgba(0,0,0,0.35); text-align: center; transition: color 0.3s; }
   .logo-mark svg { width: 28px; height: 28px; margin-top: 2px; }
+  .logo-ver { margin-left: 8px; padding: 2px 6px; border-radius: 6px; background: var(--card-2); color: var(--text-3); font-size: 11px; font-weight: 600; letter-spacing: 0; }
   .nav-btn { display: block; width: 100%; height: 40px; line-height: 40px; padding: 0 10px; margin-bottom: 2px; border-radius: 9px; color: var(--text-2); font-size: 14px; font-weight: 500; text-align: left; white-space: nowrap; transition: background 0.15s, color 0.15s; }
   .nav-btn .i { margin: -2px 12px 0 0; }
   .nav-btn.active { background: var(--primary-bg); color: var(--primary); }
@@ -137,6 +138,17 @@
   .hero-actions { margin-left: auto; padding-left: 12px; }
   .hero-actions .btn { margin: 4px 0 4px 6px; }
   .quick-grid { display: flex; flex-wrap: wrap; margin: 0 -6px 8px; }
+  .tune-card { margin-top: 6px; }
+  .tune-row { display: flex; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+  .card-sub + .tune-row { margin-top: 12px; }
+  .tune-row:last-child { padding-bottom: 0; }
+  .tune-row .grow { flex: 1; min-width: 0; }
+  .tune-row .btn { margin-left: 12px; flex-shrink: 0; }
+  .tune-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .tune-sub { font-size: 12.5px; color: var(--text-3); margin-top: 2px; line-height: 1.4; }
+  .rb-sleep.on { color: var(--primary); border-color: var(--primary-dim); background: var(--primary-bg); }
+  .sleep-opts { display: flex; flex-wrap: wrap; margin: 6px -4px 14px; }
+  .sleep-opts .btn { margin: 4px; }
   .quick { width: calc(25% - 12px); margin: 0 6px 12px; padding: 16px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); text-align: left; transition: background 0.15s, border-color 0.15s; }
   .quick .i { width: 22px; height: 22px; color: var(--primary); display: block; margin-bottom: 14px; }
   .quick-title { display: block; font-weight: 600; font-size: 14px; color: var(--text); }
@@ -369,7 +381,7 @@
 </head>
 <body class="conn-off">
 <nav class="sidebar" id="nav">
-  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm</div>
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.2</span></div>
   <button class="nav-btn active" data-page="devices" onclick="showPage('devices', event)"><i data-icon="tv"></i><span class="nav-label">Devices</span></button>
   <button class="nav-btn" data-page="remote" onclick="showPage('remote', event)"><i data-icon="remote"></i><span class="nav-label">Remote</span></button>
   <button class="nav-btn" data-page="store" onclick="showPage('store', event)"><i data-icon="shopping-bag"></i><span class="nav-label">Store</span></button>
@@ -381,7 +393,7 @@
   </div>
 </nav>
 <header class="topbar">
-  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm</div>
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.2</span></div>
   <div class="conn-pill"><span class="status-dot"></span><span class="conn-text">Not connected</span></div>
 </header>
 
@@ -409,6 +421,7 @@
         <button class="quick" onclick="showPage('apps')"><i data-icon="layout-grid"></i><span class="quick-title">My Apps</span><span class="quick-sub">See and remove</span></button>
         <button class="quick" onclick="showPage('bloatware')"><i data-icon="sparkles"></i><span class="quick-title">Bloatware</span><span class="quick-sub">Turn off junk</span></button>
       </div>
+      <div id="tuneups"></div>
       <div id="other-devices"></div>
     </div>
     <div id="connect-view">
@@ -451,6 +464,7 @@
         <div class="remote" id="remote">
           <div class="r-row">
             <div class="r-key"><button class="rb rb-power" data-key="power" onclick="press('power', this)" title="Power"><i data-icon="power"></i></button><span class="rb-label">Power</span></div>
+            <div class="r-key"><button class="rb rb-sleep" id="sleep-btn" onclick="sleepKey(this)" title="Sleep timer"><i data-icon="moon"></i></button><span class="rb-label" id="sleep-label">Sleep</span></div>
             <div class="r-key"><button class="rb" data-key="input" onclick="press('input', this)" title="Input"><i data-icon="log-in"></i></button><span class="rb-label">Input</span></div>
             <div class="r-key"><button class="rb" data-key="mute" onclick="press('mute', this)" title="Mute"><i data-icon="volume-x"></i></button><span class="rb-label">Mute</span></div>
           </div>
@@ -1004,6 +1018,8 @@ const ICONS = {
   "loader-circle": '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
   search: '<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>',
   "trash-2": '<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  moon: '<path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>',
+  wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/>',
   remote: '<rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="8" r="2"/><path d="M12 14h.01M12 17.5h.01"/>',
   "play-pause": '<path d="M4 5v14l8-7z"/><path d="M16 5v14M20 5v14"/>'
 };
@@ -1241,13 +1257,14 @@ function showPage(page) {
   document.getElementById('page-' + page).classList.add('active');
   window.scrollTo(0, 0);
   if (page === 'apps') loadApps();
+  if (page === 'devices') renderTuneups();
   if (page === 'bloatware') renderBloat();
   if (page === 'store') {
     document.getElementById('store-list').innerHTML = `<div class="loading" style="width:100%">${icon('loader-circle', 'spin')}</div>`;
     loadInstalledPackages().then(() => renderStore());
   }
   if (page === 'guides') renderGuides();
-  if (page === 'remote') renderRemote();
+  if (page === 'remote') { renderRemote(); sleepRefresh(); }
 }
 
 // ---- in-app dialogs (native confirm() looks out of place, esp. on Android) ----
@@ -1551,8 +1568,11 @@ let connectSeq = 0;
 
 // After a connection, refresh what depends on the TV's app list.
 function afterConnect() {
+  renderTuneups();
+  sleepRefresh();
   loadInstalledPackages().then(() => {
     if (document.getElementById('page-store').classList.contains('active')) renderStore();
+    renderTuneups();
   });
 }
 
@@ -1611,6 +1631,8 @@ function disconnect() {
   setStatus('off', 'Not connected');
   renderSavedDevices();
   renderRemote();
+  renderTuneups();
+  setSleepEnd(0);
 }
 
 async function reboot() {
@@ -1793,6 +1815,129 @@ async function kodiSmoothSports() {
   } catch (e) {
     toast("Couldn't reach the TV. Reconnect on the Devices page.", 'error');
   }
+}
+
+// ---- tune-ups: one-tap fixes for what's on the connected TV ----
+const TUNEUPS = [
+  { pkg: 'org.xbmc.kodi', app: 'Kodi', title: 'Smoother sports in Kodi', btn: 'Apply', run: 'kodiSmoothSports()',
+    sub: "Switches the TV to each stream's frame rate, decodes with the TV's video chip, bigger buffer" },
+  { pkg: 'com.neilturner.aerialviews', app: 'Aerial Views', title: 'Aerial Views as screensaver', btn: 'Set', run: "runAfter('com.neilturner.aerialviews')",
+    sub: '4K aerial footage when the TV is idle' },
+];
+function renderTuneups() {
+  const box = document.getElementById('tuneups');
+  if (!box) return;
+  if (!currentIp) { box.innerHTML = ''; return; }
+  box.innerHTML = `
+    <div class="card tune-card">
+      <div class="card-title-row">${icon('wrench')}Tune-ups</div>
+      <p class="card-sub">One-tap fixes for this TV.</p>
+      ${TUNEUPS.map(t => {
+        const has = isInstalled(t.pkg);
+        return `<div class="tune-row">
+          <div class="grow"><div class="tune-title">${t.title}</div><div class="tune-sub">${has ? t.sub : `Needs ${t.app}, from the Store`}</div></div>
+          ${has ? `<button class="btn btn-sm" onclick="${t.run}">${t.btn}</button>`
+                : `<button class="btn btn-sm btn-outline" onclick="showPage('store')">Store</button>`}
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ---- sleep timer ----
+// The countdown runs on the TV itself: a background `sleep` started over
+// adb, which then sends the TV the Sleep key. So it goes off even if this
+// device sleeps or Helm closes, and every Helm connected to the TV sees the
+// same timer. The TV keeps "<pid> <end time>" in SLEEP_FILE; the timer
+// deletes it when it fires. Stopping uses kill -9: the TV's shell (mksh)
+// puts off a plain kill until its `sleep` ends, leaving the old timer around.
+const SLEEP_FILE = '/data/local/tmp/helm-sleep-timer';
+const SLEEP_DEFAULT_MIN = 90;
+let sleepEnd = 0;          // when the TV will sleep, on this device's clock (ms); 0 = no timer
+let sleepTick = null;
+
+const SLEEP_STATUS = `shell F=${SLEEP_FILE}; if [ -f $F ]; then set -- $(cat $F); ` +
+  `if kill -0 $1 2>/dev/null; then echo HELM_SLEEP $2 $(date +%s); else rm -f $F; echo HELM_SLEEP_NONE; fi; ` +
+  `else echo HELM_SLEEP_NONE; fi`;
+const SLEEP_CANCEL = `shell F=${SLEEP_FILE}; [ -f $F ] && kill -9 $(cut -d' ' -f1 $F) 2>/dev/null; rm -f $F; echo HELM_OK`;
+function sleepStartCommand(seconds) {
+  return `shell F=${SLEEP_FILE}; [ -f $F ] && kill -9 $(cut -d' ' -f1 $F) 2>/dev/null; ` +
+    `nohup sh -c "sleep ${seconds}; rm -f $F; input keyevent KEYCODE_SLEEP" >/dev/null 2>&1 </dev/null & ` +
+    `echo "$! $(( $(date +%s) + ${seconds} ))" > $F; echo HELM_OK`;
+}
+
+function clockTime(t) {
+  const d = new Date(t), h = d.getHours(), m = d.getMinutes();
+  return (h % 12 || 12) + ':' + (m < 10 ? '0' : '') + m + (h < 12 ? ' AM' : ' PM');
+}
+function timeLeft(ms) {
+  const min = Math.max(1, Math.ceil(ms / 60000));
+  return min >= 60 ? Math.floor(min / 60) + ':' + (min % 60 < 10 ? '0' : '') + (min % 60) : min + ' min';
+}
+// For sentences: "1 hr 30 min", "45 min".
+function timeLeftWords(ms) {
+  const min = Math.max(1, Math.ceil(ms / 60000)), h = Math.floor(min / 60), m = min % 60;
+  return h ? h + ' hr' + (m ? ' ' + m + ' min' : '') : m + ' min';
+}
+function setSleepEnd(t) {
+  sleepEnd = t;
+  clearInterval(sleepTick);
+  sleepTick = t ? setInterval(renderSleep, 10000) : null;
+  renderSleep();
+}
+function renderSleep() {
+  const label = document.getElementById('sleep-label'), btn = document.getElementById('sleep-btn');
+  if (sleepEnd && sleepEnd <= Date.now()) { sleepEnd = 0; clearInterval(sleepTick); sleepTick = null; }
+  label.textContent = sleepEnd ? timeLeft(sleepEnd - Date.now()) : 'Sleep';
+  btn.title = sleepEnd ? `Sleep timer: the TV sleeps at ${clockTime(sleepEnd)}` : 'Sleep timer';
+  if (sleepEnd) btn.classList.add('on'); else btn.classList.remove('on');
+}
+// Read the TV's timer.
+async function sleepRefresh() {
+  if (!currentIp) { setSleepEnd(0); return; }
+  try {
+    const m = (await adb(SLEEP_STATUS)).match(/HELM_SLEEP (\d+) (\d+)/);
+    setSleepEnd(m ? Date.now() + (parseInt(m[1], 10) - parseInt(m[2], 10)) * 1000 : 0);
+  } catch (e) { /* keep what we had */ }
+}
+async function sleepKey(el) {
+  flash(el);
+  if (!currentIp) { toast('Connect to your TV first: the sleep timer runs on the TV, over Wi‑Fi.', 'error'); return; }
+  if (sleepEnd) openSleepSheet();
+  else await startSleepTimer(SLEEP_DEFAULT_MIN);
+}
+async function startSleepTimer(minutes) {
+  if (!currentIp) return;
+  try {
+    const out = await adb(sleepStartCommand(Math.round(minutes * 60)));
+    if (out.indexOf('HELM_OK') < 0) throw helmError("Couldn't start the sleep timer on the TV.");
+    // Check it's still running once the adb session has closed.
+    await new Promise(r => setTimeout(r, 1500));
+    await sleepRefresh();
+    if (!sleepEnd) throw helmError("The TV stopped Helm's sleep timer, so it can't be used on this TV.");
+    toast(`Sleep timer on: the TV sleeps at ${clockTime(sleepEnd)}`, 'success');
+  } catch (e) {
+    toast(e && e.helm ? e.message : "Couldn't reach the TV. Reconnect on the Devices page.", 'error');
+  }
+}
+async function cancelSleepTimer() {
+  try { await adb(SLEEP_CANCEL); } catch (e) { /* checked below */ }
+  await sleepRefresh();
+  if (sleepEnd) toast("Couldn't turn off the sleep timer.", 'error');
+  else toast('Sleep timer off', 'success');
+}
+function openSleepSheet() {
+  const left = Math.max(1, Math.ceil((sleepEnd - Date.now()) / 60000));
+  const opt = (label, min) => `<button class="btn btn-sm btn-outline" onclick="closeDialog(false);startSleepTimer(${min})">${label}</button>`;
+  document.getElementById('dialog-content').innerHTML = `
+    <h2>Sleep timer</h2>
+    <p class="lead">The TV goes to sleep at ${clockTime(sleepEnd)}, in ${timeLeftWords(sleepEnd - Date.now())}.</p>
+    <div class="sleep-opts">${opt('+30 min', left + 30)}${opt('30 min', 30)}${opt('1 hour', 60)}${opt('90 min', 90)}${opt('2 hours', 120)}</div>
+    <div class="btn-row" style="justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeDialog(false)">Close</button>
+      <button class="btn btn-danger" id="sleep-off" onclick="closeDialog(false);cancelSleepTimer()">Turn off timer</button>
+    </div>`;
+  document.getElementById('dialog').className = 'overlay open';
+  document.body.classList.add('modal-open');
 }
 
 async function openPlayStore(pkg, name) {

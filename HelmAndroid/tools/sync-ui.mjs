@@ -62,6 +62,14 @@ const POLYFILLS = `
 
 const html = readFileSync(SRC, "utf8");
 
+// The version shown under the logo must be the one being released.
+{
+  const want = JSON.parse(readFileSync(resolve(dirname(SRC), "../version.json"), "utf8")).version;
+  const shown = [...html.matchAll(/class="logo-ver">([^<]*)</g)].map(m => m[1]);
+  if (!shown.length) fail("ui/index.html shows no version (logo-ver)");
+  if (shown.some(v => v !== want)) fail(`ui/index.html shows version ${shown.join(", ")}, but version.json is ${want}`);
+}
+
 // The IR library is edited and verified in tools/ir/ir.js and carried inline
 // in the UI; refuse to ship a UI whose copy is stale.
 {
