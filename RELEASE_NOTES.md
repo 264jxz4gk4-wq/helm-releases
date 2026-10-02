@@ -1,6 +1,9 @@
 ## Helm — Universal TV Manager
 
-### What's New in 1.3.2
+### What's New in 1.3.3
+- **On TCL TVs, the sleep timer is the TV's own.** Helm now sets the TV's built-in sleep timer, so it shows in the TV's Sleep Timer menu, the TV gives its usual one-minute warning, and a timer set from the TV's menu shows in Helm too. Other TVs keep Helm's own timer.
+
+### 1.3.2
 - **Sleep timer on the remote.** Tap the moon key next to Power and the TV goes to sleep in 90 minutes. The time left shows under the key; tap it again to change the time, add 30 minutes or turn it off. The timer runs on the TV itself, so it still goes off if your phone or tablet sleeps or Helm is closed.
 - **Tune-ups.** A new card on the Devices page with one-tap fixes for what's on your TV: smoother sports in Kodi, and Aerial Views as your screensaver.
 - **Helm's version** now shows next to the logo.

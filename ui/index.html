@@ -381,7 +381,7 @@
 </head>
 <body class="conn-off">
 <nav class="sidebar" id="nav">
-  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.2</span></div>
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.3</span></div>
   <button class="nav-btn active" data-page="devices" onclick="showPage('devices', event)"><i data-icon="tv"></i><span class="nav-label">Devices</span></button>
   <button class="nav-btn" data-page="remote" onclick="showPage('remote', event)"><i data-icon="remote"></i><span class="nav-label">Remote</span></button>
   <button class="nav-btn" data-page="store" onclick="showPage('store', event)"><i data-icon="shopping-bag"></i><span class="nav-label">Store</span></button>
@@ -393,7 +393,7 @@
   </div>
 </nav>
 <header class="topbar">
-  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.2</span></div>
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.3</span></div>
   <div class="conn-pill"><span class="status-dot"></span><span class="conn-text">Not connected</span></div>
 </header>
 
@@ -1569,10 +1569,11 @@ let connectSeq = 0;
 // After a connection, refresh what depends on the TV's app list.
 function afterConnect() {
   renderTuneups();
-  sleepRefresh();
+  // One request at a time: the app list first, then the sleep timer.
   loadInstalledPackages().then(() => {
     if (document.getElementById('page-store').classList.contains('active')) renderStore();
     renderTuneups();
+    return sleepRefresh();
   });
 }
 
@@ -1844,23 +1845,47 @@ function renderTuneups() {
 }
 
 // ---- sleep timer ----
-// The countdown runs on the TV itself: a background `sleep` started over
-// adb, which then sends the TV the Sleep key. So it goes off even if this
-// device sleeps or Helm closes, and every Helm connected to the TV sees the
-// same timer. The TV keeps "<pid> <end time>" in SLEEP_FILE; the timer
-// deletes it when it fires. Stopping uses kill -9: the TV's shell (mksh)
-// puts off a plain kill until its `sleep` ends, leaving the old timer around.
+// TCL TVs: Helm sets the TV's own sleep timer, so it also shows in the TV's
+// Sleep Timer menu. TCL's system UI (com.tcl.shutdowndialog.PowerOffAlarmManager)
+// watches the global setting tcl_app_power_off_time_delay (ms; -1 = off).
+// When it changes, the TV schedules its own sleep alarm (tagged PowerOnTime;
+// the TV warns a minute before) and records the end in
+// tcl_app_power_off_time_expire, on Android's elapsedRealtime clock, which
+// `dumpsys alarm` prints as nowELAPSED. (Not /proc/uptime: that one stops
+// while the TV is in standby, so it's days behind.) A timer set from the
+// TV's menu shows up in Helm the same way.
+//
+// Other TVs (or a TCL that doesn't take the setting): Helm's own timer, also
+// on the TV: a background `sleep` started over adb, which then sends the
+// Sleep key. Either way it goes off even if this device sleeps or Helm
+// closes, and every Helm connected to the TV sees the same timer. Helm's own
+// timer keeps "<pid> <end time>" in SLEEP_FILE and deletes it when it fires.
+// Stopping uses kill -9: the TV's shell (mksh) puts off a plain kill until
+// its `sleep` ends, leaving the old timer around.
+const TCL_SLEEP = 'tcl_app_power_off_time_delay';
+const TCL_SLEEP_END = 'tcl_app_power_off_time_expire';
 const SLEEP_FILE = '/data/local/tmp/helm-sleep-timer';
 const SLEEP_DEFAULT_MIN = 90;
 let sleepEnd = 0;          // when the TV will sleep, on this device's clock (ms); 0 = no timer
 let sleepTick = null;
+let sleepNative = false;   // this TV has TCL's sleep timer
+let sleepNativeFailedIp = '';   // a TV whose TCL timer didn't take: use Helm's own there
 
-const SLEEP_STATUS = `shell F=${SLEEP_FILE}; if [ -f $F ]; then set -- $(cat $F); ` +
+const HELM_TIMER_STOP = `F=${SLEEP_FILE}; [ -f $F ] && kill -9 $(cut -d' ' -f1 $F) 2>/dev/null; rm -f $F`;
+const SLEEP_STATUS = `shell D=$(settings get global ${TCL_SLEEP}); if [ "$D" != null ]; then ` +
+  `E=$(settings get global ${TCL_SLEEP_END}); N=$(dumpsys alarm | grep -m1 -o 'nowELAPSED=[0-9]*'); echo HELM_TCL $D $E $N; fi; ` +
+  `F=${SLEEP_FILE}; if [ -f $F ]; then set -- $(cat $F); ` +
   `if kill -0 $1 2>/dev/null; then echo HELM_SLEEP $2 $(date +%s); else rm -f $F; echo HELM_SLEEP_NONE; fi; ` +
   `else echo HELM_SLEEP_NONE; fi`;
-const SLEEP_CANCEL = `shell F=${SLEEP_FILE}; [ -f $F ] && kill -9 $(cut -d' ' -f1 $F) 2>/dev/null; rm -f $F; echo HELM_OK`;
-function sleepStartCommand(seconds) {
-  return `shell F=${SLEEP_FILE}; [ -f $F ] && kill -9 $(cut -d' ' -f1 $F) 2>/dev/null; ` +
+const SLEEP_CANCEL = `shell D=$(settings get global ${TCL_SLEEP}); if [ "$D" != null ]; then settings put global ${TCL_SLEEP} -1; fi; ` +
+  `${HELM_TIMER_STOP}; echo HELM_OK`;
+// Off first, so setting the same length again still counts as a change.
+function tclSleepCommand(ms) {
+  return `shell ${HELM_TIMER_STOP}; settings put global ${TCL_SLEEP} -1; settings put global ${TCL_SLEEP} ${ms}; sleep 1; ` +
+    `echo HELM_ARMED $(dumpsys alarm | grep -c '^ *tag=.walarm.:PowerOnTime')`;
+}
+function helmSleepCommand(seconds) {
+  return `shell ${HELM_TIMER_STOP}; ` +
     `nohup sh -c "sleep ${seconds}; rm -f $F; input keyevent KEYCODE_SLEEP" >/dev/null 2>&1 </dev/null & ` +
     `echo "$! $(( $(date +%s) + ${seconds} ))" > $F; echo HELM_OK`;
 }
@@ -1891,12 +1916,18 @@ function renderSleep() {
   btn.title = sleepEnd ? `Sleep timer: the TV sleeps at ${clockTime(sleepEnd)}` : 'Sleep timer';
   if (sleepEnd) btn.classList.add('on'); else btn.classList.remove('on');
 }
-// Read the TV's timer.
+// Read the TV's timer: TCL's own if it's set, otherwise Helm's.
 async function sleepRefresh() {
   if (!currentIp) { setSleepEnd(0); return; }
   try {
-    const m = (await adb(SLEEP_STATUS)).match(/HELM_SLEEP (\d+) (\d+)/);
-    setSleepEnd(m ? Date.now() + (parseInt(m[1], 10) - parseInt(m[2], 10)) * 1000 : 0);
+    const out = await adb(SLEEP_STATUS);
+    const t = out.match(/HELM_TCL (-?\d+) (-?\d+) nowELAPSED=(\d+)/);
+    sleepNative = !!t && sleepNativeFailedIp !== currentIp;
+    let end = 0;
+    if (t && +t[1] > 0 && +t[2] > +t[3]) end = Date.now() + (+t[2] - +t[3]);
+    const h = out.match(/HELM_SLEEP (\d+) (\d+)/);
+    if (!end && h) end = Date.now() + (parseInt(h[1], 10) - parseInt(h[2], 10)) * 1000;
+    setSleepEnd(end);
   } catch (e) { /* keep what we had */ }
 }
 async function sleepKey(el) {
@@ -1908,7 +1939,18 @@ async function sleepKey(el) {
 async function startSleepTimer(minutes) {
   if (!currentIp) return;
   try {
-    const out = await adb(sleepStartCommand(Math.round(minutes * 60)));
+    if (sleepNative) {
+      const m = (await adb(tclSleepCommand(Math.round(minutes * 60000)))).match(/HELM_ARMED (\d+)/);
+      if (m && +m[1] > 0) {
+        await sleepRefresh();
+        if (sleepEnd) { toast(`Sleep timer on: the TV sleeps at ${clockTime(sleepEnd)}`, 'success'); return; }
+      }
+      // The TV didn't schedule anything: put its setting back, and use Helm's own timer on this TV.
+      await adb(`shell settings put global ${TCL_SLEEP} -1`);
+      sleepNativeFailedIp = currentIp;
+      sleepNative = false;
+    }
+    const out = await adb(helmSleepCommand(Math.round(minutes * 60)));
     if (out.indexOf('HELM_OK') < 0) throw helmError("Couldn't start the sleep timer on the TV.");
     // Check it's still running once the adb session has closed.
     await new Promise(r => setTimeout(r, 1500));
@@ -1921,6 +1963,7 @@ async function startSleepTimer(minutes) {
 }
 async function cancelSleepTimer() {
   try { await adb(SLEEP_CANCEL); } catch (e) { /* checked below */ }
+  await new Promise(r => setTimeout(r, 300));
   await sleepRefresh();
   if (sleepEnd) toast("Couldn't turn off the sleep timer.", 'error');
   else toast('Sleep timer off', 'success');
@@ -1930,8 +1973,8 @@ function openSleepSheet() {
   const opt = (label, min) => `<button class="btn btn-sm btn-outline" onclick="closeDialog(false);startSleepTimer(${min})">${label}</button>`;
   document.getElementById('dialog-content').innerHTML = `
     <h2>Sleep timer</h2>
-    <p class="lead">The TV goes to sleep at ${clockTime(sleepEnd)}, in ${timeLeftWords(sleepEnd - Date.now())}.</p>
-    <div class="sleep-opts">${opt('+30 min', left + 30)}${opt('30 min', 30)}${opt('1 hour', 60)}${opt('90 min', 90)}${opt('2 hours', 120)}</div>
+    <p class="lead">The TV goes to sleep at ${clockTime(sleepEnd)}, in ${timeLeftWords(sleepEnd - Date.now())}.${sleepNative ? " It's the TV's own sleep timer, so it's in the TV's settings too." : ''}</p>
+    <div class="sleep-opts">${sleepNative ? '' : opt('+30 min', left + 30)}${opt('30 min', 30)}${opt('1 hour', 60)}${opt('90 min', 90)}${opt('2 hours', 120)}</div>
     <div class="btn-row" style="justify-content:flex-end">
       <button class="btn btn-outline" onclick="closeDialog(false)">Close</button>
       <button class="btn btn-danger" id="sleep-off" onclick="closeDialog(false);cancelSleepTimer()">Turn off timer</button>

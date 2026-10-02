@@ -1,7 +1,7 @@
 {
-  "version": "1.3.2",
-  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.2/HelmMac.zip",
-  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.2/HelmWindows.zip",
-  "notes": "Sleep timer on the remote, a Tune-ups card, and Helm's version under the logo",
-  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.2/Helm.apk"
+  "version": "1.3.3",
+  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.3/HelmMac.zip",
+  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.3/HelmWindows.zip",
+  "notes": "On TCL TVs, the sleep timer now uses the TV's own timer",
+  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.3/Helm.apk"
 }
