@@ -1,6 +1,10 @@
 ## Helm — Universal TV Manager
 
-### What's New in 1.3.0
+### What's New in 1.3.1
+- **Smoother sports in Kodi, in one tap.** On the Store's Kodi card, **Smooth sports playback** sets Kodi to switch the TV to each stream's frame rate (no more judder on 25 and 50 fps streams), decode video with the TV's video chip, and keep a bigger buffer (Kodi 21 and newer). Pair it with your TV's own motion smoothing for the smoothest picture.
+- **IR remote: no more codes that can't be sent.** Some Android builds report an IR blaster that can't actually transmit, like CyanogenMod 11 on the Galaxy Tab 3. Helm now says so instead of offering codes that do nothing, and if no code works during setup it suggests a quick phone-camera test.
+
+### 1.3.0
 - **A new look.** Helm has been redesigned from the ground up: cleaner screens, new icons, and a layout that fits phones (tabs along the bottom), tablets and computers.
 - **Remote.** Control your TV from Helm: arrows, OK, back, home, volume, channels, play/pause and power. **Type on your TV** from your keyboard or phone, for searches and Wi‑Fi passwords. On a computer, the arrow keys, Enter and Esc work too.
 - **IR blaster support (Helm for Android).** On phones and tablets with an IR blaster, like the Galaxy Tab 3, the remote also works over infrared, so it can turn the TV on, which Wi‑Fi can't. Pick your TV's brand and Helm tries its codes until the TV responds.

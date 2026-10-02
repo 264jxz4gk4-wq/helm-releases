@@ -39,8 +39,8 @@ wireless-debugging pairing works exactly as it does on the desktop.
 
 ### IR blaster
 
-On a device with an infrared transmitter (the Galaxy Tab 3, many Xiaomi
-phones), the Remote page can also work the TV over IR, including turning it
+On a device with a working infrared transmitter (many Xiaomi phones, older
+Samsung Galaxy phones and tablets on their original software), the Remote page can also work the TV over IR, including turning it
 on, which adb can't do once the TV is off. The UI asks `GET /ir` whether the
 device has one (only when it's running in an Android WebView), walks the
 person through picking their TV's code set by trying power codes, then sends
@@ -50,6 +50,13 @@ request and passes it to `ConsumerIrManager.transmit()`.
 The codes and protocol encoders live in `tools/ir/` (`ir.js`, carried inline
 in the UI), with a test that checks every key against independent references.
 See `tools/ir/README.md`.
+
+Some Android builds report an IR blaster that can't transmit: their IR driver
+writes to Samsung's `/sys/class/sec/sec_ir/ir_send`, which the kernel doesn't
+have (CyanogenMod 11 on the Galaxy Tab 3 7.0). `IrDriverCheck` in
+`IrBlaster.kt` spots exactly that before Android 8, and `GET /ir` then adds
+`"problem": "no-driver"`; the Remote page says IR isn't working on the device
+and never routes keys to it.
 
 ### What the build does to the shared UI
 

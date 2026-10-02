@@ -52,10 +52,15 @@ object IrBlaster {
                 Log.w(TAG, "could not read carrier frequencies", e)
             }
         }
-        return JSONObject()
+        val status = JSONObject()
             .put("available", available)
             .put("carriers", carriers)
             .put("timing", if (platformUsesCycles()) "cycles" else "us")
+        if (available && Build.VERSION.SDK_INT < 26 && IrDriverCheck.secIrMissing()) {
+            // Android says there's an emitter, but nothing will come out of it.
+            status.put("problem", "no-driver")
+        }
+        return status
     }
 
     /** Returns null on success, otherwise a reason a person can read. */
@@ -89,5 +94,48 @@ object IrBlaster {
             Log.w(TAG, "transmit failed ($frequency Hz, ${pattern.size} entries, cycles=$cycles)", e)
             "IR send failed: ${e.message ?: e.javaClass.simpleName}"
         }
+    }
+}
+
+/**
+ * Spots one way an IR blaster can be reported but dead: Samsung-style IR
+ * drivers (consumerir.*.so, as in CyanogenMod builds for Samsung devices)
+ * write each code to /sys/class/sec/sec_ir/ir_send, and some kernels - the
+ * CyanogenMod 11 kernel on the Galaxy Tab 3 7.0, for one - don't have that
+ * driver. The HAL then reports success for every code and nothing is sent.
+ *
+ * Only says "missing" when it can see for itself: the HAL file names that
+ * path, and /sys/class/sec is readable and has no sec_ir in it. Anything it
+ * can't read counts as "fine", so a working device is never flagged. Only
+ * used before Android 8, when IR drivers were plain .so files like this.
+ *
+ * No Android classes here, so it can be tested on a plain JVM.
+ */
+object IrDriverCheck {
+    private const val SEC_IR_SEND = "/sys/class/sec/sec_ir/ir_send"
+    private val HAL_DIRS = listOf("/system/lib/hw", "/vendor/lib/hw", "/system/lib64/hw", "/vendor/lib64/hw")
+
+    fun secIrMissing(
+        halDirs: List<java.io.File> = HAL_DIRS.map { java.io.File(it) },
+        secClass: java.io.File = java.io.File("/sys/class/sec"),
+    ): Boolean = try {
+        val usesSecIr = halDirs.any { dir ->
+            dir.listFiles()?.any { f ->
+                f.name.startsWith("consumerir.") && f.name.endsWith(".so") && f.length() < 1_000_000 &&
+                    contains(f.readBytes(), SEC_IR_SEND.toByteArray(Charsets.US_ASCII))
+            } == true
+        }
+        val entries = secClass.list()
+        usesSecIr && entries != null && "sec_ir" !in entries
+    } catch (e: Exception) {
+        false
+    }
+
+    private fun contains(hay: ByteArray, needle: ByteArray): Boolean {
+        outer@ for (i in 0..hay.size - needle.size) {
+            for (j in needle.indices) if (hay[i + j] != needle[j]) continue@outer
+            return true
+        }
+        return false
     }
 }

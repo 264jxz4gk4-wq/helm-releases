@@ -1084,7 +1084,8 @@ const STORE = [
   // Media Players
   { name: 'Kodi', pkg: 'org.xbmc.kodi', desc: 'Ultimate media center with addons', color: '#17B2E7', category: 'Media Players',
     url: 'https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.3-Omega-arm64-v8a.apk',
-    url_v7a: 'https://mirrors.kodi.tv/releases/android/arm/kodi-21.3-Omega-armeabi-v7a.apk' },
+    url_v7a: 'https://mirrors.kodi.tv/releases/android/arm/kodi-21.3-Omega-armeabi-v7a.apk',
+    after: { label: 'Smooth sports playback', fn: 'kodiSmoothSports' } },
   { name: 'Jellyfin', pkg: 'org.jellyfin.androidtv', desc: 'Stream your personal media library', color: '#AA5CC3', category: 'Media Players',
     url: 'https://github.com/jellyfin/jellyfin-androidtv/releases/download/v0.19.10/jellyfin-androidtv-v0.19.10-release.apk' },
   { name: 'VLC', pkg: 'org.videolan.vlc', desc: 'Universal video player', color: '#FF8800', category: 'Media Players',
@@ -1258,6 +1259,18 @@ function askConfirm(title, body, okLabel, danger) {
     <div class="btn-row" style="justify-content:flex-end">
       <button class="btn btn-outline" onclick="closeDialog(false)">Cancel</button>
       <button class="btn ${danger ? 'btn-danger' : ''}" id="dialog-ok" onclick="closeDialog(true)">${esc(okLabel || 'OK')}</button>
+    </div>`;
+  document.getElementById('dialog').className = 'overlay open';
+  document.body.classList.add('modal-open');
+  return new Promise(resolve => { dialogResolve = resolve; });
+}
+// A message with just an OK button, for results too long for a toast.
+function showNotice(title, paragraphs) {
+  document.getElementById('dialog-content').innerHTML = `
+    <h2>${esc(title)}</h2>
+    ${paragraphs.map(p => `<p class="lead">${esc(p)}</p>`).join('')}
+    <div class="btn-row" style="justify-content:flex-end">
+      <button class="btn" id="dialog-ok" onclick="closeDialog(true)">OK</button>
     </div>`;
   document.getElementById('dialog').className = 'overlay open';
   document.body.classList.add('modal-open');
@@ -1702,9 +1715,84 @@ function renderStoreList(apps) {
 async function runAfter(pkg) {
   const app = STORE.find(a => a.pkg === pkg);
   if (!app || !app.after || !currentIp) return;
+  if (app.after.fn) { await window[app.after.fn](); return; }
   const r = await adbRaw(`adb -s ${currentIp}:5555 ${app.after.command}`);
   if (r.error && /error|exception|denied/i.test(r.error)) toast(`Couldn't do that: ${r.error.slice(0, 120)}`, 'error');
   else toast(app.after.done, 'success');
+}
+
+// ---- Kodi: smooth sports playback ----
+// Changes Kodi's own settings over Wi-Fi by editing its settings file. Kodi
+// rewrites that file whenever it closes, so it's closed first and picks the
+// changes up next time it opens. Setting ids and allowed values are Kodi's
+// own (system/settings/settings.xml and settings/ServicesSettings.cpp in the
+// Kodi source); the two cache settings exist from Kodi 21.
+const KODI_SETTINGS_FILE = '/sdcard/Android/data/org.xbmc.kodi/files/.kodi/userdata/guisettings.xml';
+const KODI_SMOOTH = [
+  { id: 'videoplayer.adjustrefreshrate', value: '2' },      // Adjust display refresh rate: On start/stop
+  { id: 'videoplayer.usemediacodecsurface', value: 'true' },// hardware decoding (MediaCodec Surface)
+  { id: 'videoplayer.usemediacodec', value: 'true' },       // hardware decoding (MediaCodec)
+  { id: 'filecache.memorysize', value: '64', buffer: true },   // buffer: 64 MB (default 20)
+  { id: 'filecache.readfactor', value: '1000', buffer: true }, // refill at 10x the stream's rate (default 4x)
+];
+
+// Kodi's current values for KODI_SMOOTH, as { id: value }; null if its
+// settings file isn't there (Kodi writes it the first time it closes);
+// 'denied' if this TV doesn't let adb into apps' data folders.
+async function kodiSmoothValues() {
+  const ids = KODI_SMOOTH.map(s => s.id.replace(/\./g, '\\.')).join('|');
+  const out = await adb(`shell if [ -f ${KODI_SETTINGS_FILE} ]; then grep -E 'id="(${ids})"' ${KODI_SETTINGS_FILE}; echo HELM_OK; ` +
+    `elif ls /sdcard/Android/data 2>&1 | grep -q -i denied; then echo HELM_DENIED; else echo HELM_NO_FILE; fi`);
+  if (out.indexOf('HELM_DENIED') >= 0) return 'denied';
+  if (out.indexOf('HELM_OK') < 0) return null;
+  const values = {};
+  out.split('\n').forEach(line => {
+    const m = line.match(/<setting id="([^"]+)"[^>]*>([^<]*)<\/setting>/);
+    if (m) values[m[1]] = m[2];
+  });
+  return values;
+}
+
+async function kodiSmoothSports() {
+  if (!currentIp) { toast('Connect to your TV first', 'error'); return; }
+  if (!await askConfirm('Smoother sports in Kodi?',
+    "Helm will close Kodi and change three of its settings: switch the TV to each stream's frame rate (no more judder on 25 and 50 fps streams), " +
+    "decode video with the TV's video chip, and use a bigger buffer. You can change them back in Kodi under Settings, Player and Services.",
+    'Change settings')) return;
+  toast('Updating Kodi…', 'info');
+  try {
+    await adb('shell am force-stop org.xbmc.kodi');
+    const before = await kodiSmoothValues();
+    if (before === 'denied') {
+      toast("This TV doesn't let Helm reach Kodi's settings. Set them in Kodi instead: Settings, Player, Videos, Adjust display refresh rate.", 'error');
+      return;
+    }
+    if (!before) {
+      toast("Couldn't find Kodi's settings. Open Kodi once and close it, then try again.", 'error');
+      return;
+    }
+    const known = KODI_SMOOTH.filter(s => s.id in before);
+    for (const s of known) {
+      if (before[s.id] === s.value) continue;
+      const id = s.id.replace(/\./g, '\\.');
+      await adb(`shell sed -i 's#<setting id="${id}"[^>]*>[^<]*</setting>#<setting id="${s.id}">${s.value}</setting>#' ${KODI_SETTINGS_FILE}`);
+    }
+    const after = await kodiSmoothValues();
+    if (!after || after === 'denied' || known.some(s => after[s.id] !== s.value)) {
+      toast("Couldn't change Kodi's settings on this TV.", 'error');
+      return;
+    }
+    const noBuffer = KODI_SMOOTH.some(s => s.buffer && !(s.id in before));
+    document.getElementById('toast').className = 'toast';
+    showNotice('Kodi is set for smoother sports', [
+      noBuffer
+        ? "Next time you open Kodi, it will switch the TV to each stream's frame rate and decode video with the TV's video chip. The bigger buffer needs Kodi 21 or newer: update Kodi from the Store."
+        : "Next time you open Kodi, it will switch the TV to each stream's frame rate, decode video with the TV's video chip, and keep a bigger buffer.",
+      "For even smoother motion, turn on the TV's own motion smoothing too: on the TV, Settings → Picture → Advanced, then Judder Reduction or Motion Clarity.",
+    ]);
+  } catch (e) {
+    toast("Couldn't reach the TV. Reconnect on the Devices page.", 'error');
+  }
 }
 
 async function openPlayStore(pkg, name) {
@@ -2048,7 +2136,7 @@ let irSetup = null;
 const DESKTOP_KEYS = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
 
 function irReady() {
-  return irInfo.available && !!irPrefs.brand && !!irPrefs.set && !!irSetFor(irPrefs.brand, irPrefs.set);
+  return irInfo.available && !irInfo.problem && !!irPrefs.brand && !!irPrefs.set && !!irSetFor(irPrefs.brand, irPrefs.set);
 }
 function irBrand(id) { return HelmIR.BRANDS.find(b => b.id === id); }
 function irSetFor(brandId, setId) {
@@ -2077,9 +2165,9 @@ async function loadIr() {
     const res = await fetch(`${API}/ir`);
     if (!res.ok) throw new Error('no IR');
     const d = await res.json();
-    irInfo = { available: !!d.available, carriers: d.carriers || [], timing: d.timing || 'us' };
+    irInfo = { available: !!d.available, carriers: d.carriers || [], timing: d.timing || 'us', problem: d.problem || '' };
   } catch (e) {
-    irInfo = { available: false, carriers: [], timing: 'us' };
+    irInfo = { available: false, carriers: [], timing: 'us', problem: '' };
   }
   renderRemote();
 }
@@ -2107,7 +2195,7 @@ async function press(key, el) {
   const route = routeFor(key);
   if (route === 'none') {
     if (irReady()) toast(`Your TV's IR codes don't include ${KEY_NAMES[key] || 'that button'}. Connect over Wi‑Fi to use it.`, 'error');
-    else toast(irInfo.available ? 'Connect to your TV, or set up the IR remote' : 'Connect to your TV first', 'error');
+    else toast(irInfo.available && !irInfo.problem ? 'Connect to your TV, or set up the IR remote' : 'Connect to your TV first', 'error');
     return;
   }
   try {
@@ -2186,7 +2274,7 @@ function renderRemote() {
   });
   const notice = document.getElementById('remote-notice');
   if (!currentIp && !ready) {
-    notice.innerHTML = `<div class="notice">${icon('circle-alert')}<span class="grow">${irInfo.available ? 'Connect to your TV over Wi‑Fi, or set up the IR remote below.' : 'Connect to your TV to use the remote.'}</span><button class="btn btn-sm btn-outline" onclick="showPage('devices')">Connect</button></div>`;
+    notice.innerHTML = `<div class="notice">${icon('circle-alert')}<span class="grow">${irInfo.available && !irInfo.problem ? 'Connect to your TV over Wi‑Fi, or set up the IR remote below.' : 'Connect to your TV to use the remote.'}</span><button class="btn btn-sm btn-outline" onclick="showPage('devices')">Connect</button></div>`;
   } else {
     notice.innerHTML = '';
   }
@@ -2200,6 +2288,12 @@ function renderIrCard() {
   if (!irInfo.available) { card.style.display = 'none'; return; }
   card.style.display = '';
   const title = (chip) => `<div class="card-title-row">${icon('radio')}IR remote${chip}</div>`;
+  if (irInfo.problem) {
+    // Helm for Android found the IR driver has nothing to send through (see IrDriverCheck in IrBlaster.kt).
+    card.innerHTML = title('<span class="chip">Not working</span>') + `
+      <p class="card-sub">Android says this device has an IR blaster, but its Android version has no driver for the IR hardware, so no codes can be sent. The rest of the remote works over Wi‑Fi.</p>`;
+    return;
+  }
   if (irSetup && irSetup.step === 'brand') {
     const hint = (currentName || '').toLowerCase();
     card.innerHTML = title('') + `
@@ -2233,7 +2327,8 @@ function renderIrCard() {
         <button class="btn btn-sm btn-outline" onclick="startIrSetup()">Choose another brand</button>
         <button class="btn btn-sm btn-ghost" onclick="irCancel()">Cancel</button>
       </div>
-      <p class="hint">Alternate timing helps on some older Samsung tablets whose IR driver counts differently.</p>`;
+      <p class="hint">Alternate timing helps on some older Samsung tablets whose IR driver counts differently.</p>
+      <p class="hint">To check this device sends IR at all, point it at a phone's selfie camera and press the power button: the IR light shows as a flicker on the phone's screen.</p>`;
   } else if (irReady()) {
     const b = irBrand(irPrefs.brand), s = irSetFor(irPrefs.brand, irPrefs.set);
     card.innerHTML = title('<span class="chip chip-ok">Ready</span>') + `
