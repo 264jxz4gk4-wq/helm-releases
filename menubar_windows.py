@@ -394,6 +394,34 @@ def tv_remote_key():
     except OSError as e:
         return jsonify({'success': False, 'error': 'unreachable', 'detail': str(e)})
 
+@app.route('/tv-remote/text', methods=['POST'])
+def tv_remote_text():
+    data = request.json or {}
+    ip, text = _tvr_ip(data), str(data.get('text', ''))
+    if not ip or not text or len(text) > 500:
+        return jsonify({'success': False, 'error': 'invalid ip or text'}), 400
+    try:
+        TV_REMOTE.type_text(ip, text)
+        return jsonify({'success': True})
+    except atvremote.NoTextBox:
+        return jsonify({'success': False, 'error': 'no_text_box'})
+    except atvremote.NotPaired:
+        return jsonify({'success': False, 'error': 'not_paired'})
+    except OSError as e:
+        return jsonify({'success': False, 'error': 'unreachable', 'detail': str(e)})
+
+@app.route('/tv-remote/state', methods=['POST'])
+def tv_remote_state():
+    ip = _tvr_ip(request.json or {})
+    if not ip:
+        return jsonify({'success': False, 'error': 'invalid ip'}), 400
+    try:
+        return jsonify(dict(success=True, **TV_REMOTE.state(ip)))
+    except atvremote.NotPaired:
+        return jsonify({'success': False, 'error': 'not_paired'})
+    except OSError as e:
+        return jsonify({'success': False, 'error': 'unreachable', 'detail': str(e)})
+
 @app.route('/tv-remote/launch', methods=['POST'])
 def tv_remote_launch():
     data = request.json or {}
@@ -480,7 +508,7 @@ def make_icon():
 def open_ui(icon, item):
     webbrowser.open('http://localhost:5001')
 
-CURRENT_VERSION = '1.3.10'
+CURRENT_VERSION = '1.3.11'
 
 def do_update(download_url, icon):
     try:

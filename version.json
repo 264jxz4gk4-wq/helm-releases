@@ -1,8 +1,8 @@
 {
-  "version": "1.3.10",
-  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.10/HelmMac.zip",
-  "mac_intel_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.10/HelmMacIntel.zip",
-  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.10/HelmWindows.zip",
-  "notes": "Faster remote, and Remote without developer options on Android too",
-  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.10/Helm.apk"
+  "version": "1.3.11",
+  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.11/HelmMac.zip",
+  "mac_intel_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.11/HelmMacIntel.zip",
+  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.11/HelmWindows.zip",
+  "notes": "Type on the TV through the paired remote, see what's playing, and let Helm turn on developer options",
+  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.11/Helm.apk"
 }

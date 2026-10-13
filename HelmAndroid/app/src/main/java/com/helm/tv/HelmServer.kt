@@ -148,6 +148,13 @@ class HelmServer(
                     if (key !in 1..399) return json(JSONObject().put("success", false).put("error", "invalid key"), Response.Status.BAD_REQUEST)
                     tvRemote.press(ip, key); json(JSONObject().put("success", true))
                 }
+                "/tv-remote/text" -> {
+                    val text = b.optString("text")
+                    if (text.isEmpty() || text.length > 500) return json(JSONObject().put("success", false).put("error", "invalid text"), Response.Status.BAD_REQUEST)
+                    try { tvRemote.typeText(ip, text); json(JSONObject().put("success", true)) }
+                    catch (e: TvRemote.NoTextBox) { json(JSONObject().put("success", false).put("error", "no_text_box")) }
+                }
+                "/tv-remote/state" -> json(tvRemote.state(ip))
                 "/tv-remote/launch" -> {
                     val url = b.optString("url").trim()
                     if (url.length > 500 || !Regex("^(https?|market)://.*").matches(url)) {

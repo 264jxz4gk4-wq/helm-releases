@@ -348,7 +348,7 @@ class PairingError(Exception):
     pass
 
 # ----------------------------------------------------------------- remote
-FEATURES = (1 << 0) | (1 << 1) | (1 << 5) | (1 << 6) | (1 << 9)   # ping, key, power, volume, app link
+FEATURES = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 5) | (1 << 6) | (1 << 9)   # ping, key, ime, power, volume, app link
 
 class Remote:
     """A live remote-control connection. Answers the TV's pings in the
@@ -362,6 +362,9 @@ class Remote:
         self.closed = False
         self.device = {}
         self.is_on = None
+        self.app = None              # package of the app on screen (from IME messages)
+        self.volume = None           # {'level', 'max', 'muted'}
+        self.ime = None              # (ime_counter, field_counter) while a text box is focused
         threading.Thread(target=self._reader, daemon=True).start()
         if not self.ready.wait(10):
             self.close()
@@ -389,6 +392,17 @@ class Remote:
                 elif 8 in msg:                                      # ping -> pong
                     val = pb_parse(msg[8][0]).get(1, [0])[0]
                     self._send(pb((9, pb((1, val)))))
+                elif 20 in msg:                                     # remote_ime_key_inject: app on screen
+                    info = pb_parse(pb_parse(msg[20][0]).get(1, [b''])[0])
+                    pkg = info.get(12, [b''])[0]
+                    if pkg:
+                        self.app = pkg.decode(errors='replace')
+                elif 21 in msg:                                     # remote_ime_batch_edit: a text box has focus
+                    be = pb_parse(msg[21][0])
+                    self.ime = (be.get(1, [0])[0], be.get(2, [0])[0])
+                elif 50 in msg:                                     # remote_set_volume_level
+                    v = pb_parse(msg[50][0])
+                    self.volume = {'level': v.get(7, [0])[0], 'max': v.get(6, [0])[0], 'muted': bool(v.get(8, [0])[0])}
                 elif 40 in msg:                                     # remote_start
                     self.is_on = bool(pb_parse(msg[40][0]).get(1, [0])[0])
                     self.ready.set()
@@ -403,6 +417,18 @@ class Remote:
         if self.closed:
             raise ConnectionError('not connected')
         self._send(pb((10, pb((1, int(keycode)), (2, direction)))))
+
+    def type_text(self, text):
+        """Put `text` in the text box focused on the TV (replaces what's there),
+        the way Google's remote app types."""
+        if self.closed:
+            raise ConnectionError('not connected')
+        if not self.ime:
+            raise NoTextBox('no text box is open on the TV')
+        ime_counter, field_counter = self.ime
+        at = len(text) - 1
+        edit = pb((1, 1), (2, pb((1, at), (2, at), (3, text))))
+        self._send(pb((21, pb((1, ime_counter), (2, field_counter), (3, edit)))))
 
     def launch(self, url):
         """Open an app by link, e.g. https://www.youtube.com or market://details?id=..."""
@@ -480,6 +506,14 @@ class TvRemoteManager:
                 if attempt:
                     raise
 
+    def type_text(self, ip, text):
+        r = self._remote(ip)
+        r.type_text(text)
+
+    def state(self, ip):
+        r = self._remote(ip)
+        return {'app': r.app, 'volume': r.volume, 'device': r.device, 'typing': bool(r.ime)}
+
     def launch(self, ip, url):
         for attempt in (0, 1):
             r = self._remote(ip)
@@ -492,6 +526,9 @@ class TvRemoteManager:
                     raise
 
 class NotPaired(Exception):
+    pass
+
+class NoTextBox(Exception):
     pass
 
 # ---------------------------------------------------------------- testing

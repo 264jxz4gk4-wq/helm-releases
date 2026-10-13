@@ -20,7 +20,12 @@ Helm isn't signed with a paid Apple or Microsoft certificate, so your computer w
 - **Windows**, "Windows protected your PC": click **More info**, then **Run anyway**.
 </details>
 
-### What's New in 1.3.10
+### What's New in 1.3.11
+- **Typing through the paired remote.** On a paired Google TV, text you send from the Remote page goes straight into the TV's search box: instant, no developer options needed, and accents and emoji work too.
+- **What's on the TV.** The Remote page shows which app is open and the volume level.
+- **Helm turns on developer options for you.** Paired with a code but no developer options yet? On the Remote page, tap **Turn on**: Helm presses the buttons to open Settings, taps the build number 7 times and opens Developer options. You flip the last switch yourself.
+
+### 1.3.10
 - **Helm for Android:** clearer messages when pairing the fast remote doesn't finish.
 
 ### 1.3.9

@@ -45,13 +45,14 @@ class TvRemote(private val context: Context) {
         private const val PAIR_PORT = 6467
         private const val REMOTE_PORT = 6466
         private const val OK = 200
-        // ping, key, power, volume, app link
-        private const val FEATURES = (1 shl 0) or (1 shl 1) or (1 shl 5) or (1 shl 6) or (1 shl 9)
+        // ping, key, ime, power, volume, app link
+        private const val FEATURES = (1 shl 0) or (1 shl 1) or (1 shl 2) or (1 shl 5) or (1 shl 6) or (1 shl 9)
         private val PASS = "helm".toCharArray()
     }
 
     class PairingError(msg: String) : Exception(msg)
     class NotPaired(msg: String) : Exception(msg)
+    class NoTextBox(msg: String) : Exception(msg)
 
     // ------------------------------------------------------------ protobuf
     private fun varint(n0: Long): ByteArray {
@@ -308,6 +309,9 @@ class TvRemote(private val context: Context) {
         private val lock = Object()
         @Volatile var closed = false
         @Volatile var device: Map<String, String> = emptyMap()
+        @Volatile var app: String? = null                 // app on screen, from IME messages
+        @Volatile var volume: IntArray? = null            // level, max, muted(0/1)
+        @Volatile var ime: LongArray? = null              // ime_counter, field_counter while a text box has focus
         private val ready = java.util.concurrent.CountDownLatch(1)
 
         init {
@@ -335,6 +339,18 @@ class TvRemote(private val context: Context) {
                         }
                         msg.containsKey(2) -> write(pb(2 to pb(1 to FEATURES)))        // set_active
                         msg.containsKey(8) -> write(pb(9 to pb(1 to parse(msg.bytes(8)!!).long(1))))   // ping -> pong
+                        msg.containsKey(20) -> {                                         // ime_key_inject: app on screen
+                            val info = parse(parse(msg.bytes(20)!!).bytes(1) ?: ByteArray(0))
+                            info.bytes(12)?.let { app = String(it) }
+                        }
+                        msg.containsKey(21) -> {                                         // ime_batch_edit: text box focused
+                            val be = parse(msg.bytes(21)!!)
+                            ime = longArrayOf(be.long(1), be.long(2))
+                        }
+                        msg.containsKey(50) -> {                                         // volume level
+                            val v = parse(msg.bytes(50)!!)
+                            volume = intArrayOf(v.long(7).toInt(), v.long(6).toInt(), v.long(8).toInt())
+                        }
                         msg.containsKey(40) -> ready.countDown()                        // remote_start
                     }
                 }
@@ -349,6 +365,14 @@ class TvRemote(private val context: Context) {
         fun press(keycode: Int) {
             if (closed) throw java.io.IOException("not connected")
             write(pb(10 to pb(1 to keycode, 2 to 3)))     // key_inject, SHORT
+        }
+
+        fun typeText(text: String) {
+            if (closed) throw java.io.IOException("not connected")
+            val counters = ime ?: throw NoTextBox("no text box is open on the TV")
+            val at = text.length - 1
+            val edit = pb(1 to 1, 2 to pb(1 to at, 2 to at, 3 to text))
+            write(pb(21 to pb(1 to counters[0], 2 to counters[1], 3 to edit)))
         }
 
         fun launch(url: String) {
@@ -375,6 +399,17 @@ class TvRemote(private val context: Context) {
             val r = remote(ip)
             try { r.press(keycode); return } catch (e: java.io.IOException) { r.close(); if (attempt == 1) throw e }
         }
+    }
+
+    fun typeText(ip: String, text: String) = remote(ip).typeText(text)
+
+    fun state(ip: String): org.json.JSONObject {
+        val r = remote(ip)
+        val o = org.json.JSONObject().put("success", true).put("typing", r.ime != null)
+            .put("device", org.json.JSONObject(r.device))
+        r.app?.let { o.put("app", it) }
+        r.volume?.let { o.put("volume", org.json.JSONObject().put("level", it[0]).put("max", it[1]).put("muted", it[2] != 0)) }
+        return o
     }
 
     fun launch(ip: String, url: String) {
