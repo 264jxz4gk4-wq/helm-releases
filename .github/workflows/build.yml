@@ -61,6 +61,60 @@ jobs:
           name: HelmMac
           path: HelmMac.zip
 
+  # Same app for Intel Macs: GitHub's macos-latest runners are Apple Silicon,
+  # and an arm64-only app won't open on an Intel Mac ("incorrect executable format").
+  build-mac-intel:
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller flask rumps pillow requests zeroconf pyobjc-framework-ServiceManagement
+
+      - name: Build Mac app
+        run: |
+          python3 -c "
+          from PIL import Image, ImageDraw
+          import math, struct, zlib, os
+          size = 64
+          img = Image.new('RGBA', (size, size), (0,0,0,0))
+          d = ImageDraw.Draw(img)
+          cx, cy = size//2, size//2
+          scale = size/1024
+          primary = (46,134,255,255)
+          outer = int(280*scale)
+          d.ellipse([cx-outer,cy-outer,cx+outer,cy+outer], outline=primary, width=max(int(28*scale),2))
+          inner = int(120*scale)
+          d.ellipse([cx-inner,cy-inner,cx+inner,cy+inner], outline=primary, width=max(int(20*scale),2))
+          hub = int(55*scale)
+          d.ellipse([cx-hub,cy-hub,cx+hub,cy+hub], fill=primary)
+          for angle in range(0,360,45):
+              rad = math.radians(angle)
+              x1=cx+math.sin(rad)*inner; y1=cy-math.cos(rad)*inner
+              x2=cx+math.sin(rad)*outer; y2=cy-math.cos(rad)*outer
+              d.line([x1,y1,x2,y2], fill=primary, width=max(int(18*scale),2))
+              ball=max(int(22*scale),3)
+              d.ellipse([x2-ball,y2-ball,x2+ball,y2+ball], fill=primary)
+          img.save('/tmp/helm.png')
+          print('Icon created')
+          "
+          pyinstaller --windowed --name "Helm" \
+            --add-data "ui:ui" \
+            menubar.py --noconfirm
+          cd dist && zip -r ../HelmMacIntel.zip Helm.app
+
+      - name: Upload Mac artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HelmMacIntel
+          path: HelmMacIntel.zip
+
   build-windows:
     runs-on: windows-latest
     steps:
@@ -162,7 +216,7 @@ jobs:
           path: Helm.apk
 
   release:
-    needs: [build-mac, build-windows]
+    needs: [build-mac, build-mac-intel, build-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -182,6 +236,7 @@ jobs:
           body_path: RELEASE_NOTES.md
           files: |
             HelmMac/HelmMac.zip
+            HelmMacIntel/HelmMacIntel.zip
             HelmWindows/HelmWindows.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
