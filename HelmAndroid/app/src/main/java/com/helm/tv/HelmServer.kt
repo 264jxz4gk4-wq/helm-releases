@@ -37,6 +37,8 @@ class HelmServer(
         private const val JSON = "application/json"
     }
 
+    private val tvRemote = TvRemote(context)
+
     override fun serve(session: IHTTPSession): Response {
         if (!hostAllowed(session.headers["host"])) {
             return json(JSONObject().put("error", "invalid Host header"), Response.Status.FORBIDDEN)
@@ -69,6 +71,10 @@ class HelmServer(
                 session.method == Method.POST && session.uri == "/adb" -> handleAdb(readJson(session))
                 session.method == Method.POST && session.uri == "/pair" -> handlePair(readJson(session))
                 session.method == Method.POST && session.uri == "/wake" -> handleWake(readJson(session))
+
+                // Remote without developer options (Google's TV remote protocol). See TvRemote.kt.
+                session.method == Method.GET && session.uri == "/tv-remote/status" -> json(JSONObject().put("available", true))
+                session.method == Method.POST && session.uri.startsWith("/tv-remote/") -> handleTvRemote(session.uri, readJson(session))
                 session.method == Method.GET && session.uri == "/scan-network" -> handleScan()
 
                 // IR blaster. Android only: the UI asks only when it's running
@@ -124,6 +130,41 @@ class HelmServer(
         val out = JSONObject().put("success", r.success)
         if (r.success) out.put("ip", r.ip).put("model", r.model) else out.put("error", r.error)
         return json(out)
+    }
+
+    private fun handleTvRemote(uri: String, body: JSONObject?): Response {
+        val b = body ?: JSONObject()
+        val ip = b.optString("ip").substringBefore(':').trim()
+        if (!wakeIpRe.matches(ip)) return json(JSONObject().put("success", false).put("error", "invalid ip"), Response.Status.BAD_REQUEST)
+        return try {
+            when (uri) {
+                "/tv-remote/pair-start" -> { tvRemote.pairStart(ip); json(JSONObject().put("success", true)) }
+                "/tv-remote/pair-finish" -> {
+                    val dev = tvRemote.pairFinish(ip, b.optString("code"))
+                    json(JSONObject().put("success", true).put("device", JSONObject(dev)))
+                }
+                "/tv-remote/key" -> {
+                    val key = b.optInt("key", -1)
+                    if (key !in 1..399) return json(JSONObject().put("success", false).put("error", "invalid key"), Response.Status.BAD_REQUEST)
+                    tvRemote.press(ip, key); json(JSONObject().put("success", true))
+                }
+                "/tv-remote/launch" -> {
+                    val url = b.optString("url").trim()
+                    if (url.length > 500 || !Regex("^(https?|market)://.*").matches(url)) {
+                        return json(JSONObject().put("success", false).put("error", "invalid link"), Response.Status.BAD_REQUEST)
+                    }
+                    tvRemote.launch(ip, url); json(JSONObject().put("success", true))
+                }
+                else -> json(JSONObject().put("error", "not found"), Response.Status.NOT_FOUND)
+            }
+        } catch (e: TvRemote.NotPaired) {
+            json(JSONObject().put("success", false).put("error", if (uri.endsWith("pair-finish")) (e.message ?: "pairing failed") else "not_paired"))
+        } catch (e: TvRemote.PairingError) {
+            json(JSONObject().put("success", false).put("error", e.message))
+        } catch (e: java.io.IOException) {
+            val msg = if (uri.endsWith("pair-start")) "Couldn't reach the TV's remote service (${e.message}). Is it a Google TV or Android TV, and on the same Wi-Fi?" else "unreachable"
+            json(JSONObject().put("success", false).put("error", msg))
+        }
     }
 
     // Wake-on-LAN: see send_magic_packet in menubar.py. 6 x 0xFF, then the

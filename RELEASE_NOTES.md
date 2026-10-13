@@ -20,7 +20,11 @@ Helm isn't signed with a paid Apple or Microsoft certificate, so your computer w
 - **Windows**, "Windows protected your PC": click **More info**, then **Run anyway**.
 </details>
 
-### What's New in 1.3.8
+### What's New in 1.3.9
+- **A faster remote.** On Google TVs and Android TVs, the Remote page offers **Pair** once: type the code the TV shows, and from then on every button goes over one open connection instead of a separate command per press, so presses land right away. Typing, installs and everything else keep using your normal connection.
+- **Remote without developer options, now in Helm for Android too.** Phones and tablets get the **Remote only** option on the My TV page, like Mac and Windows.
+
+### 1.3.8
 - **Remote without developer options (Mac and Windows).** On a Google TV or Android TV, tap **Remote only** on the My TV page, type the code the TV shows, and Helm's Remote works: arrows, OK, Home, Back, volume, play/pause and power. It uses the same pairing as Google's own TV remote, so there's nothing to turn on in the TV's settings. Installing apps and the other tools still need developer options. Coming to Helm for Android next.
 
 ### 1.3.7

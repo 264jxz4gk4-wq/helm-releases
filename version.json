@@ -1,8 +1,8 @@
 {
-  "version": "1.3.8",
-  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.8/HelmMac.zip",
-  "mac_intel_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.8/HelmMacIntel.zip",
-  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.8/HelmWindows.zip",
-  "notes": "Use Helm's Remote on Google TVs without developer options",
-  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.8/Helm.apk"
+  "version": "1.3.9",
+  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.9/HelmMac.zip",
+  "mac_intel_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.9/HelmMacIntel.zip",
+  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.9/HelmWindows.zip",
+  "notes": "Faster remote, and Remote without developer options on Android too",
+  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.9/Helm.apk"
 }

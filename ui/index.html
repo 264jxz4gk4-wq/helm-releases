@@ -392,7 +392,7 @@
 </head>
 <body class="conn-off">
 <nav class="sidebar" id="nav">
-  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.8</span></div>
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.9</span></div>
   <button class="nav-btn active" data-page="devices" onclick="showPage('devices', event)"><i data-icon="tv"></i><span class="nav-label">My TV</span></button>
   <button class="nav-btn" data-page="remote" onclick="showPage('remote', event)"><i data-icon="remote"></i><span class="nav-label">Remote</span></button>
   <button class="nav-btn" data-page="store" onclick="showPage('store', event)"><i data-icon="layout-grid"></i><span class="nav-label">Apps</span></button>
@@ -402,7 +402,7 @@
   </div>
 </nav>
 <header class="topbar">
-  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.8</span></div>
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.9</span></div>
   <div class="conn-pill"><span class="status-dot"></span><span class="conn-text">Not connected</span></div>
 </header>
 
@@ -2470,9 +2470,11 @@ function routeFor(key) {
   // In IR mode, keys the TV's IR codes don't have (Delete, Enter, media
   // keys on some sets) still go over Wi-Fi when the TV is connected.
   if (remoteMode === 'ir' && irKey) return 'ir';
+  // A TV paired with the remote pairing: use it even when adb is connected.
+  // One open connection is much faster than an adb command per key.
+  if (tvRemoteIp && TV_KEYCODES[key] && (!currentIp || currentIp === tvRemoteIp)) return 'tvremote';
   if (wifiKey) return 'wifi';
   if (irKey) return 'ir';
-  if (tvRemoteIp && TV_KEYCODES[key]) return 'tvremote';
   return 'none';
 }
 
@@ -2525,8 +2527,8 @@ async function press(key, el) {
   try {
     if (route === 'ir') {
       await irSend(irPrefs.brand, irPrefs.set, key, irPrefs.timing);
-    } else if (route === 'tvremote') {
-      await pressViaTvRemote(key);
+    } else if (route === 'tvremote' && (await pressViaTvRemote(key) || !currentIp)) {
+      // sent (or nothing else to try)
     } else {
       const r = await adbRaw(`adb -s ${currentIp}:5555 shell input keyevent ${REMOTE_KEYS[key]}`);
       if (/not found|offline|unauthorized|no devices|closed/i.test(r.error)) {
@@ -2585,9 +2587,9 @@ function askCode() {
   return new Promise(resolve => { dialogResolve = resolve; });
 }
 
-async function startCodePairing() {
+async function startCodePairing(forIp) {
   const typed = document.getElementById('ip-input').value.trim().replace(/:\d+$/, '');
-  const ip = typed || localStorage.getItem('lastIp') || '';
+  const ip = forIp || typed || localStorage.getItem('lastIp') || '';
   if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
     toast("Type your TV's IP address first. On the TV: Settings → Network & Internet → your Wi‑Fi.", 'error');
     return;
@@ -2605,23 +2607,28 @@ async function startCodePairing() {
   localStorage.setItem('tvRemoteIp', ip);
   document.getElementById('toast').className = 'toast';
   const d = done.device || {};
-  showNotice('Remote connected', [
+  showNotice(forIp ? 'Fast remote is on' : 'Remote connected', forIp ? [
+    `The Remote now sends buttons to ${d.model ? d.vendor + ' ' + d.model : 'your TV'} over one open connection, so presses land right away. Everything else still uses your normal connection.`,
+  ] : [
     `Helm can now control ${d.model ? d.vendor + ' ' + d.model : 'your TV'} without developer options: arrows, OK, Home, Back, volume, play/pause and power.`,
     'Installing apps, cleaning up and the other tools still need developer options. You can turn those on any time and connect as usual.',
   ]);
   showPage('remote');
 }
 
+// true when the key went through. When adb is also connected, a failure
+// returns false so the caller sends the key over adb instead.
 async function pressViaTvRemote(key) {
   const r = await tvRemotePost('/tv-remote/key', { ip: tvRemoteIp, key: TV_KEYCODES[key] });
-  if (r.success) return;
+  if (r.success) return true;
   if (r.error === 'not_paired') {
     tvRemoteIp = ''; localStorage.removeItem('tvRemoteIp');
     renderRemote();
-    toast('The TV forgot Helm. Pair again with a code on the My TV page.', 'error');
-  } else {
+    if (!currentIp) toast('The TV forgot Helm. Pair again with a code on the My TV page.', 'error');
+  } else if (!currentIp) {
     toast("Can't reach the TV. Is it on and on the same Wi‑Fi?", 'error');
   }
+  return false;
 }
 
 // ---- turning the TV on over Wi-Fi (Wake-on-LAN) ----
@@ -2744,7 +2751,7 @@ function renderRemote() {
     sub.textContent = `Sending IR codes for ${irBrand(irPrefs.brand).name} · point this device at the TV`;
     if (!set) sub.textContent = 'IR remote';
   } else {
-    sub.textContent = currentIp ? `Controlling ${currentName || currentIp} over Wi‑Fi`
+    sub.textContent = currentIp ? `Controlling ${currentName || currentIp} over Wi‑Fi${tvRemoteIp === currentIp ? ' · fast remote' : ''}`
       : tvRemoteIp ? `Controlling ${tvRemoteIp} with a remote pairing (no developer options)` : 'Control your TV over Wi‑Fi';
   }
   document.querySelectorAll('#remote [data-key]').forEach(b => {
@@ -2753,6 +2760,8 @@ function renderRemote() {
   const notice = document.getElementById('remote-notice');
   if (!currentIp && !ready && !tvRemoteIp) {
     notice.innerHTML = `<div class="notice">${icon('circle-alert')}<span class="grow">${irInfo.available && !irInfo.problem ? 'Connect to your TV over Wi‑Fi, or set up the IR remote below.' : 'Connect to your TV to use the remote.'}</span><button class="btn btn-sm btn-outline" onclick="showPage('devices')">Connect</button></div>`;
+  } else if (currentIp && tvRemoteAvailable && tvRemoteIp !== currentIp && currentDeviceType !== 'firetv') {
+    notice.innerHTML = `<div class="notice">${icon('zap')}<span class="grow">Make this remote faster: pair it with a code from your TV, once.</span><button class="btn btn-sm btn-outline" onclick="startCodePairing(currentIp)">Pair</button></div>`;
   } else {
     notice.innerHTML = '';
   }
