@@ -1,7 +1,7 @@
 {
-  "version": "1.3.5",
-  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.5/HelmMac.zip",
-  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.5/HelmWindows.zip",
-  "notes": "Simpler layout: four tabs, and apps offer their setup step right after installing",
-  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.5/Helm.apk"
+  "version": "1.3.6",
+  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.6/HelmMac.zip",
+  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.6/HelmWindows.zip",
+  "notes": "Store links checked: newer PPSSPP, Projectivy and Aerial Views",
+  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.6/Helm.apk"
 }

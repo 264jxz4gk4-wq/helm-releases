@@ -1,6 +1,9 @@
 ## Helm — Universal TV Manager
 
-### What's New in 1.3.5
+### What's New in 1.3.6
+- **Store links checked and updated.** PPSSPP is now 1.20.4 (was 1.17.1), Projectivy 4.72 and Aerial Views 1.8.5. Every other download link was checked and points to the right, current file.
+
+### 1.3.5
 - **A simpler layout: four tabs instead of six.** **My TV**, **Remote**, **Apps** and **Help**. The Store and My Apps are now one **Apps** page: what's on your TV at the top, more to add below. Bloatware is now **Clean up**, one tap away on My TV and in Tune-ups. Guides are now **Help**.
 - **Setup right after installing.** When an app has a setup step, like Projectivy, Kodi or Aerial Views, Helm offers it as soon as the install finishes, and the button sits next to the app in **On this TV**.
 
