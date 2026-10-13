@@ -139,6 +139,14 @@
   .hero-actions .btn { margin: 4px 0 4px 6px; }
   .quick-grid { display: flex; flex-wrap: wrap; margin: 0 -6px 8px; }
   .tune-card { margin-top: 6px; }
+  .on-tv-card { margin-bottom: 28px; }
+  .on-tv-head { display: flex; align-items: flex-start; }
+  .on-tv-head .grow { flex: 1; min-width: 0; }
+  .on-tv-head .btn { margin-left: 12px; flex-shrink: 0; }
+  .on-tv-card #apps-list { margin-top: 10px; }
+  .section-head { font-size: 18px; margin: 0 0 12px; }
+  .show-all { display: block; width: 100%; margin-top: 10px; }
+  .back-link { display: inline-flex; align-items: center; color: var(--primary); font-size: 14px; font-weight: 600; margin: 0 0 6px -4px; padding: 2px 4px; }
   .tune-row { display: flex; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
   .card-sub + .tune-row { margin-top: 12px; }
   .tune-row:last-child { padding-bottom: 0; }
@@ -381,26 +389,24 @@
 </head>
 <body class="conn-off">
 <nav class="sidebar" id="nav">
-  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.4</span></div>
-  <button class="nav-btn active" data-page="devices" onclick="showPage('devices', event)"><i data-icon="tv"></i><span class="nav-label">Devices</span></button>
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.5</span></div>
+  <button class="nav-btn active" data-page="devices" onclick="showPage('devices', event)"><i data-icon="tv"></i><span class="nav-label">My TV</span></button>
   <button class="nav-btn" data-page="remote" onclick="showPage('remote', event)"><i data-icon="remote"></i><span class="nav-label">Remote</span></button>
-  <button class="nav-btn" data-page="store" onclick="showPage('store', event)"><i data-icon="shopping-bag"></i><span class="nav-label">Store</span></button>
-  <button class="nav-btn" data-page="apps" onclick="showPage('apps', event)"><i data-icon="layout-grid"></i><span class="nav-label">My Apps</span></button>
-  <button class="nav-btn" data-page="bloatware" onclick="showPage('bloatware', event)"><i data-icon="sparkles"></i><span class="nav-label">Bloatware</span></button>
-  <button class="nav-btn" data-page="guides" onclick="showPage('guides', event)"><i data-icon="book-open"></i><span class="nav-label">Guides</span></button>
+  <button class="nav-btn" data-page="store" onclick="showPage('store', event)"><i data-icon="layout-grid"></i><span class="nav-label">Apps</span></button>
+  <button class="nav-btn" data-page="guides" onclick="showPage('guides', event)"><i data-icon="book-open"></i><span class="nav-label">Help</span></button>
   <div class="side-foot">
     <div class="conn-pill"><span class="status-dot" id="status-dot"></span><span class="conn-text" id="status-text">Not connected</span></div>
   </div>
 </nav>
 <header class="topbar">
-  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.4</span></div>
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.5</span></div>
   <div class="conn-pill"><span class="status-dot"></span><span class="conn-text">Not connected</span></div>
 </header>
 
 <main class="main">
   <section class="page active" id="page-devices">
     <div class="page-head">
-      <h1>Devices</h1>
+      <h1>My TV</h1>
       <p class="subtitle">Connect to your Fire TV, Google TV or Android TV</p>
     </div>
     <div id="connected-view" style="display:none">
@@ -417,9 +423,9 @@
       </div>
       <div class="quick-grid">
         <button class="quick" onclick="showPage('remote')"><i data-icon="remote"></i><span class="quick-title">Remote</span><span class="quick-sub">Control and type</span></button>
-        <button class="quick" onclick="showPage('store')"><i data-icon="shopping-bag"></i><span class="quick-title">Store</span><span class="quick-sub">Install apps</span></button>
-        <button class="quick" onclick="showPage('apps')"><i data-icon="layout-grid"></i><span class="quick-title">My Apps</span><span class="quick-sub">See and remove</span></button>
-        <button class="quick" onclick="showPage('bloatware')"><i data-icon="sparkles"></i><span class="quick-title">Bloatware</span><span class="quick-sub">Turn off junk</span></button>
+        <button class="quick" onclick="showPage('store')"><i data-icon="layout-grid"></i><span class="quick-title">Apps</span><span class="quick-sub">Add and remove</span></button>
+        <button class="quick" onclick="showPage('bloatware')"><i data-icon="sparkles"></i><span class="quick-title">Clean up</span><span class="quick-sub">Turn off junk</span></button>
+        <button class="quick" onclick="showPage('guides')"><i data-icon="book-open"></i><span class="quick-title">Help</span><span class="quick-sub">Step-by-step guides</span></button>
       </div>
       <div id="tuneups"></div>
       <div id="other-devices"></div>
@@ -516,9 +522,17 @@
 
   <section class="page" id="page-store">
     <div class="page-head">
-      <h1>Store</h1>
-      <p class="subtitle">Install apps straight to your TV</p>
+      <h1>Apps</h1>
+      <p class="subtitle">What's on your TV, and more to add</p>
     </div>
+    <div class="card on-tv-card">
+      <div class="on-tv-head">
+        <div class="grow"><div class="card-title-row"><i data-icon="tv"></i>On this TV</div><p class="card-sub" id="apps-subtitle">Apps you've added to your TV</p></div>
+        <button class="btn btn-sm btn-outline" onclick="loadApps()"><i data-icon="refresh-cw"></i>Refresh</button>
+      </div>
+      <div id="apps-list"><div class="empty">Connect to a TV first</div></div>
+    </div>
+    <h2 class="section-head">Get more apps</h2>
     <div class="filter-row" id="store-filters"></div>
     <div class="store-grid" id="store-list"></div>
   </section>
@@ -526,7 +540,8 @@
   <section class="page" id="page-bloatware">
     <div class="page-head head-row">
       <div>
-        <h1>Bloatware</h1>
+        <button class="back-link" onclick="showPage('devices')"><i data-icon="chevron-left"></i>My TV</button>
+        <h1>Clean up</h1>
         <p class="subtitle">Turn off pre-installed apps you don't use. You can turn them back on any time.</p>
       </div>
       <button class="btn btn-sm btn-danger" id="disable-all" onclick="disableAll()" style="margin-top:10px">Disable all</button>
@@ -534,16 +549,6 @@
     <div id="bloat-list"></div>
   </section>
 
-  <section class="page" id="page-apps">
-    <div class="page-head head-row">
-      <div>
-        <h1>My Apps</h1>
-        <p class="subtitle" id="apps-subtitle">Apps you've added to your TV</p>
-      </div>
-      <button class="btn btn-sm btn-outline" onclick="loadApps()" style="margin-top:10px"><i data-icon="refresh-cw"></i>Refresh</button>
-    </div>
-    <div id="apps-list"><div class="empty">Connect to a TV first</div></div>
-  </section>
 
   <section class="page" id="page-guides">
     <div class="page-head">
@@ -1086,7 +1091,8 @@ const STORE = [
   { name: 'Downloader', pkg: 'com.esaba.downloader', desc: 'Browse and sideload APKs on your TV — required for Fire TV', color: '#F68B1F', category: 'Utility',
     playstore: true },
   { name: 'Button Mapper', pkg: 'flar2.homebutton', desc: 'Remap your TV remote buttons', color: '#1E88E5', category: 'Utility', playstore: true,
-    after: { label: 'Turn on', fn: 'buttonMapperSetup' } },
+    after: { label: 'Turn on', fn: 'buttonMapperSetup',
+             why: 'give Button Mapper the Accessibility permission it needs to remap your remote.' } },
   { name: 'TV Bro', pkg: 'com.phlox.tvwebbrowser', desc: 'Web browser built for TV remotes', color: '#5FACFF', category: 'Utility',
     url: 'https://github.com/truefedex/tv-bro/releases/download/v2.1.6/tvbro-2.1.6-generic-geckoExcluded.apk' },
   { name: 'LocalSend', pkg: 'org.localsend.localsend_app', desc: 'Send photos and files from your phone to the TV over Wi‑Fi', color: '#008080', category: 'Utility',
@@ -1097,12 +1103,14 @@ const STORE = [
     // Google TV hides third-party screensavers from Settings; this is the
     // developer's documented way to choose it.
     after: { label: 'Set as screensaver', done: 'Aerial Views is now your screensaver',
+             why: "make it your TV's screensaver. Google TV hides it from Settings, so Helm sets it for you.",
              command: 'shell settings put secure screensaver_components com.neilturner.aerialviews/.ui.screensaver.DreamActivity' } },
   // Media Players
   { name: 'Kodi', pkg: 'org.xbmc.kodi', desc: 'Ultimate media center with addons', color: '#17B2E7', category: 'Media Players',
     url: 'https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.3-Omega-arm64-v8a.apk',
     url_v7a: 'https://mirrors.kodi.tv/releases/android/arm/kodi-21.3-Omega-armeabi-v7a.apk',
-    after: { label: 'Smooth sports playback', fn: 'kodiSmoothSports' } },
+    after: { label: 'Smooth sports playback', fn: 'kodiSmoothSports',
+             why: "set Kodi up for smooth sports: it switches the TV to each stream's frame rate, decodes with the TV's video chip and keeps a bigger buffer." } },
   { name: 'Jellyfin', pkg: 'org.jellyfin.androidtv', desc: 'Stream your personal media library', color: '#AA5CC3', category: 'Media Players',
     url: 'https://github.com/jellyfin/jellyfin-androidtv/releases/download/v0.19.10/jellyfin-androidtv-v0.19.10-release.apk' },
   { name: 'VLC', pkg: 'org.videolan.vlc', desc: 'Universal video player', color: '#FF8800', category: 'Media Players',
@@ -1122,7 +1130,8 @@ const STORE = [
   // Launchers
   { name: 'Projectivy', pkg: 'com.spocky.projengmenu', desc: 'Clean, customizable home screen', color: '#E78940', category: 'Launchers',
     url: 'https://github.com/spocky/miproja1/releases/download/4.71/ProjectivyLauncher-4.71-c95-xda-release.apk',
-    after: { label: 'Finish setup', fn: 'projectivySetup' } },
+    after: { label: 'Finish setup', fn: 'projectivySetup',
+             why: "turn on the permissions Projectivy needs, so the Home button can open it and its notification badges work." } },
   // Games
   { name: 'Moonlight', pkg: 'com.limelight', desc: 'Stream games from your PC to the TV', color: '#565C64', category: 'Games',
     url: 'https://github.com/moonlight-stream/moonlight-android/releases/download/v12.2/app-nonRoot-release.apk' },
@@ -1167,7 +1176,7 @@ const GUIDES = [
   ]},
   { id: 'stremio', section: 'stremio', title: 'Get Started with Stremio', icon: 'circle-play', color: '#2980b9', desc: 'Easiest setup for movies + TV — but not for live sports', steps: [
     { title: 'Why start with Stremio?', body: 'If you want the simplest possible setup, start here instead of Kodi. Stremio looks and works just like Netflix, takes about 10 minutes total, and addons sync automatically to your account — no repos, no zip files, no File Manager. This is the best option for most normal people.' },
-    { title: 'Step 1: Install Stremio on your TV', body: 'Open the Store tab in Helm and tap Install on Stremio. On Google TV or Android TV this opens the Play Store directly to Stremio — tap Install there. On Fire TV, Stremio is not available this way (it is not in the Amazon Appstore) — see the "Fire TV Owners: Read This First" guide for a quick 5-minute workaround using the Downloader app.' },
+    { title: 'Step 1: Install Stremio on your TV', body: 'Open the Apps tab in Helm and tap Install on Stremio. On Google TV or Android TV this opens the Play Store directly to Stremio — tap Install there. On Fire TV, Stremio is not available this way (it is not in the Amazon Appstore) — see the "Fire TV Owners: Read This First" guide for a quick 5-minute workaround using the Downloader app.' },
     { title: 'Step 2: Create a free account', body: 'Open Stremio on your TV and create a free account, or sign in with Google or Facebook. This account is what makes your addons sync automatically across your phone, TV, and computer.' },
     { title: 'Step 3: Get a Debrid service (optional but recommended)', body: 'Stremio works without a debrid service, but streams will be slower and may buffer. With Real Debrid or TorBox at about $3/month you get instant 4K with zero buffering. See the Debrid Comparison guide if you have not picked one yet.' },
     { title: 'Step 4: Add the Torrentio addon', body: 'On your phone or computer (not the TV) go to: https://torrentio.strem.fun — this opens a configuration page. If you have a debrid service, select it from the list and enter your API key (find it at real-debrid.com/apitoken or your TorBox dashboard). Click Install at the bottom.' },
@@ -1251,19 +1260,25 @@ function setStatus(state, text) {
   document.querySelectorAll('.conn-text').forEach(el => { el.textContent = text; });
 }
 
+// Apps used to be two tabs (Store and My Apps) and Clean up was its own tab.
+// Old names still work; Clean up lights the My TV tab it belongs to.
+const PAGE_ALIAS = { apps: 'store' };
+const NAV_PARENT = { bloatware: 'devices' };
 function showPage(page) {
+  page = PAGE_ALIAS[page] || page;
+  const navPage = NAV_PARENT[page] || page;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => {
-    if (b.getAttribute('data-page') === page) b.classList.add('active'); else b.classList.remove('active');
+    if (b.getAttribute('data-page') === navPage) b.classList.add('active'); else b.classList.remove('active');
   });
   document.getElementById('page-' + page).classList.add('active');
   window.scrollTo(0, 0);
-  if (page === 'apps') loadApps();
   if (page === 'devices') renderTuneups();
   if (page === 'bloatware') renderBloat();
   if (page === 'store') {
     document.getElementById('store-list').innerHTML = `<div class="loading" style="width:100%">${icon('loader-circle', 'spin')}</div>`;
     loadInstalledPackages().then(() => renderStore());
+    loadApps();
   }
   if (page === 'guides') renderGuides();
   if (page === 'remote') { renderRemote(); sleepRefresh(); }
@@ -1737,10 +1752,21 @@ function renderStoreList(apps) {
   }).join('');
 }
 
-async function runAfter(pkg) {
+// Right after an install, offer the app's setup step instead of leaving a
+// small button on its card for people to discover.
+async function offerNextStep(pkg) {
+  const app = STORE.find(a => a.pkg === pkg);
+  if (!app || !app.after) return;
+  await new Promise(r => setTimeout(r, 900));
+  if (await askConfirm(`${app.name} is installed`, `One more step: ${app.after.why}`, app.after.label)) runAfter(pkg, true);
+}
+
+// asked = the person already said yes (in offerNextStep), so the setup
+// step skips its own "are you sure" question.
+async function runAfter(pkg, asked) {
   const app = STORE.find(a => a.pkg === pkg);
   if (!app || !app.after || !currentIp) return;
-  if (app.after.fn) { await window[app.after.fn](); return; }
+  if (app.after.fn) { await window[app.after.fn](asked); return; }
   const r = await adbRaw(`adb -s ${currentIp}:5555 ${app.after.command}`);
   if (r.error && /error|exception|denied/i.test(r.error)) toast(`Couldn't do that: ${r.error.slice(0, 120)}`, 'error');
   else toast(app.after.done, 'success');
@@ -1778,9 +1804,9 @@ async function kodiSmoothValues() {
   return values;
 }
 
-async function kodiSmoothSports() {
+async function kodiSmoothSports(asked) {
   if (!currentIp) { toast('Connect to your TV first', 'error'); return; }
-  if (!await askConfirm('Smoother sports in Kodi?',
+  if (!asked && !await askConfirm('Smoother sports in Kodi?',
     "Helm will close Kodi and change three of its settings: switch the TV to each stream's frame rate (no more judder on 25 and 50 fps streams), " +
     "decode video with the TV's video chip, and use a bigger buffer. You can change them back in Kodi under Settings, Player and Services.",
     'Change settings')) return;
@@ -1811,12 +1837,12 @@ async function kodiSmoothSports() {
     document.getElementById('toast').className = 'toast';
     showNotice('Kodi is set for smoother sports', [
       noBuffer
-        ? "Next time you open Kodi, it will switch the TV to each stream's frame rate and decode video with the TV's video chip. The bigger buffer needs Kodi 21 or newer: update Kodi from the Store."
+        ? "Next time you open Kodi, it will switch the TV to each stream's frame rate and decode video with the TV's video chip. The bigger buffer needs Kodi 21 or newer: update Kodi from Apps."
         : "Next time you open Kodi, it will switch the TV to each stream's frame rate, decode video with the TV's video chip, and keep a bigger buffer.",
       "For even smoother motion, turn on the TV's own motion smoothing too: on the TV, Settings → Picture → Advanced, then Judder Reduction or Motion Clarity.",
     ]);
   } catch (e) {
-    toast("Couldn't reach the TV. Reconnect on the Devices page.", 'error');
+    toast("Couldn't reach the TV. Reconnect on the My TV page.", 'error');
   }
 }
 
@@ -1847,9 +1873,9 @@ async function enableAccessibility(component) {
   return (await secureSetting('enabled_accessibility_services')).split(':').includes(component);
 }
 
-async function projectivySetup() {
+async function projectivySetup(asked) {
   if (!currentIp) { toast('Connect to your TV first', 'error'); return; }
-  if (!await askConfirm('Finish setting up Projectivy?',
+  if (!asked && !await askConfirm('Finish setting up Projectivy?',
     "Helm will turn on the permissions Projectivy asks for: Accessibility (so the Home button can open Projectivy), " +
     "notification access (for its notification badges) and display over other apps (for its side panels). " +
     "You can turn them off later in the TV's Settings, under Accessibility and Apps.",
@@ -1871,13 +1897,13 @@ async function projectivySetup() {
       "Its settings just opened on the TV. To make Home always open Projectivy, go to General and turn on Override Home button (the wording varies a little between versions).",
     ]);
   } catch (e) {
-    toast("Couldn't reach the TV. Reconnect on the Devices page.", 'error');
+    toast("Couldn't reach the TV. Reconnect on the My TV page.", 'error');
   }
 }
 
-async function buttonMapperSetup() {
+async function buttonMapperSetup(asked) {
   if (!currentIp) { toast('Connect to your TV first', 'error'); return; }
-  if (!await askConfirm('Turn on Button Mapper?',
+  if (!asked && !await askConfirm('Turn on Button Mapper?',
     "Helm will give Button Mapper the Accessibility permission it needs to remap your remote's buttons. " +
     "You can turn it off later in the TV's Settings, under Accessibility.", 'Turn on')) return;
   try {
@@ -1892,7 +1918,7 @@ async function buttonMapperSetup() {
       toast("This TV didn't accept the change. Turn it on by hand: Settings, Accessibility, Button Mapper.", 'error');
     }
   } catch (e) {
-    toast("Couldn't reach the TV. Reconnect on the Devices page.", 'error');
+    toast("Couldn't reach the TV. Reconnect on the My TV page.", 'error');
   }
 }
 
@@ -1904,6 +1930,8 @@ const TUNEUPS = [
     sub: '4K aerial footage when the TV is idle' },
   { pkg: 'com.spocky.projengmenu', app: 'Projectivy', title: 'Finish Projectivy setup', btn: 'Set up', run: 'projectivySetup()',
     sub: 'Turns on the Home button takeover and notification badges for you' },
+  { pkg: null, title: 'Turn off unused apps', btn: 'Clean up', run: "showPage('bloatware')",
+    sub: "Pre-installed apps you don't use slow the TV down" },
   { pkg: 'flar2.homebutton', app: 'Button Mapper', title: 'Turn on Button Mapper', btn: 'Turn on', run: 'buttonMapperSetup()',
     sub: 'Gives it the Accessibility permission it needs to remap buttons' },
 ];
@@ -1916,11 +1944,11 @@ function renderTuneups() {
       <div class="card-title-row">${icon('wrench')}Tune-ups</div>
       <p class="card-sub">One-tap fixes for this TV.</p>
       ${TUNEUPS.map(t => {
-        const has = isInstalled(t.pkg);
+        const has = !t.pkg || isInstalled(t.pkg);
         return `<div class="tune-row">
-          <div class="grow"><div class="tune-title">${t.title}</div><div class="tune-sub">${has ? t.sub : `Needs ${t.app}, from the Store`}</div></div>
+          <div class="grow"><div class="tune-title">${t.title}</div><div class="tune-sub">${has ? t.sub : `Needs ${t.app}, from Apps`}</div></div>
           ${has ? `<button class="btn btn-sm" onclick="${t.run}">${t.btn}</button>`
-                : `<button class="btn btn-sm btn-outline" onclick="showPage('store')">Store</button>`}
+                : `<button class="btn btn-sm btn-outline" onclick="showPage('store')">Get it</button>`}
         </div>`;
       }).join('')}
     </div>`;
@@ -2040,7 +2068,7 @@ async function startSleepTimer(minutes) {
     if (!sleepEnd) throw helmError("The TV stopped Helm's sleep timer, so it can't be used on this TV.");
     toast(`Sleep timer on: the TV sleeps at ${clockTime(sleepEnd)}`, 'success');
   } catch (e) {
-    toast(e && e.helm ? e.message : "Couldn't reach the TV. Reconnect on the Devices page.", 'error');
+    toast(e && e.helm ? e.message : "Couldn't reach the TV. Reconnect on the My TV page.", 'error');
   }
 }
 async function cancelSleepTimer() {
@@ -2163,6 +2191,7 @@ async function installApp(name, encodedUrl, pkg, encodedUrlV7a) {
       installedPackages.push(pkg);
       toast(`${name} installed!`, 'success');
       setTimeout(() => renderStore(), 1500);
+      offerNextStep(pkg);
     }
     setTimeout(() => { wrap.style.display = 'none'; bar.style.width = '0%'; bar.classList.remove('failed'); label.textContent = ''; }, 3000);
   } catch(e) {
@@ -2178,7 +2207,7 @@ async function installApp(name, encodedUrl, pkg, encodedUrlV7a) {
 function emptyState(ic, text, action) {
   return `<div class="empty">${icon(ic)}${text}${action || ''}</div>`;
 }
-const CONNECT_FIRST = () => emptyState('tv', 'Connect to a TV first', `<div style="margin-top:14px"><button class="btn btn-sm btn-outline" onclick="showPage('devices')">Go to Devices</button></div>`);
+const CONNECT_FIRST = () => emptyState('tv', 'Connect to a TV first', `<div style="margin-top:14px"><button class="btn btn-sm btn-outline" onclick="showPage('devices')">Connect a TV</button></div>`);
 
 async function renderBloat() {
   document.getElementById('disable-all').style.display = currentIp ? '' : 'none';
@@ -2224,7 +2253,7 @@ async function disableAll() {
   if (!await askConfirm('Turn off all of these?', 'You can turn any of them back on later from this page.', 'Turn off all', true)) return;
   const list = currentDeviceType === 'firetv' ? FIRETV_BLOAT : GOOGLETV_BLOAT;
   for (const item of list) await toggleBloat(item.pkg, false, true);
-  toast('Bloatware turned off', 'success');
+  toast('Unused apps turned off', 'success');
   renderBloat();
 }
 
@@ -2273,6 +2302,13 @@ function formatAppName(pkg) {
   return { name: name.charAt(0).toUpperCase() + name.slice(1), color: null };
 }
 
+// An app's setup step (Finish setup, Smooth sports playback...) next to it.
+function setupFor(pkg) {
+  const app = STORE.find(a => a.pkg === pkg && a.after);
+  return app ? `<button class="btn btn-sm btn-outline" style="margin-right:6px" onclick="runAfter('${app.pkg}')">${app.after.label}</button>` : '';
+}
+const APPS_PREVIEW = 5;
+let appsShowAll = false;
 async function loadApps() {
   const list = document.getElementById('apps-list');
   if (!currentIp) {
@@ -2285,14 +2321,17 @@ async function loadApps() {
     const result = await adb('shell pm list packages -3');
     const pkgs = result.split('\n').map(l => l.replace('package:','').trim()).filter(l => l.includes('.'));
     document.getElementById('apps-subtitle').textContent = `${pkgs.length} app${pkgs.length === 1 ? '' : 's'} you've added to your TV`;
-    list.innerHTML = pkgs.length ? pkgs.map(pkg => {
+    const shown = appsShowAll ? pkgs : pkgs.slice(0, APPS_PREVIEW);
+    const more = pkgs.length - shown.length;
+    list.innerHTML = pkgs.length ? shown.map(pkg => {
       const { name, color } = formatAppName(pkg);
       return `<div class="installed-row list-row">
         ${tile(name, color, true)}
         <div class="row-info"><div class="pkg-name">${esc(name)}</div><div class="pkg-id">${esc(pkg)}</div></div>
-        <button class="btn btn-sm btn-ghost" data-pkg="${esc(pkg)}" onclick="uninstallApp(this.getAttribute('data-pkg'))">Remove</button>
+        ${setupFor(pkg)}<button class="btn btn-sm btn-ghost" data-pkg="${esc(pkg)}" onclick="uninstallApp(this.getAttribute('data-pkg'))">Remove</button>
       </div>`;
-    }).join('') : emptyState('layout-grid', 'No added apps yet. Find some in the Store.');
+    }).join('') + (more > 0 ? `<button class="btn btn-sm btn-outline show-all" onclick="appsShowAll=true;loadApps()">Show all ${pkgs.length}</button>` : '')
+      : emptyState('layout-grid', 'No added apps yet. Add some below.');
   } catch (e) {
     list.innerHTML = emptyState('circle-alert', "Couldn't load apps from the TV");
   }
@@ -2309,6 +2348,7 @@ async function uninstallApp(pkg) {
   await new Promise(r => setTimeout(r, 800));
   toast(`${name} removed`, 'success');
   loadApps();
+  loadInstalledPackages().then(() => renderStore());
 }
 
 // ---- guides ----
@@ -2473,7 +2513,7 @@ async function press(key, el) {
       await irSend(irPrefs.brand, irPrefs.set, key, irPrefs.timing);
     } else {
       const r = await adbRaw(`adb -s ${currentIp}:5555 shell input keyevent ${REMOTE_KEYS[key]}`);
-      if (/not found|offline|unauthorized|no devices|closed/i.test(r.error)) throw helmError("The TV isn't responding. Reconnect on the Devices page.");
+      if (/not found|offline|unauthorized|no devices|closed/i.test(r.error)) throw helmError("The TV isn't responding. Reconnect on the My TV page.");
     }
   } catch (e) {
     toast(e && e.helm ? e.message : "Couldn't send that", 'error');
@@ -2508,7 +2548,7 @@ async function sendText() {
     const said = `${r.error || ''} ${r.output || ''}`;
     if (/exception|error|not found|offline|unauthorized|no devices|closed/i.test(said)) {
       toast(/not found|offline|unauthorized|no devices|closed/i.test(said)
-        ? "The TV isn't responding. Reconnect on the Devices page."
+        ? "The TV isn't responding. Reconnect on the My TV page."
         : "The TV couldn't type that.", 'error');
       return;
     }

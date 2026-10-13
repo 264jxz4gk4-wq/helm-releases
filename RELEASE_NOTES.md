@@ -1,6 +1,10 @@
 ## Helm — Universal TV Manager
 
-### What's New in 1.3.4
+### What's New in 1.3.5
+- **A simpler layout: four tabs instead of six.** **My TV**, **Remote**, **Apps** and **Help**. The Store and My Apps are now one **Apps** page: what's on your TV at the top, more to add below. Bloatware is now **Clean up**, one tap away on My TV and in Tune-ups. Guides are now **Help**.
+- **Setup right after installing.** When an app has a setup step, like Projectivy, Kodi or Aerial Views, Helm offers it as soon as the install finishes, and the button sits next to the app in **On this TV**.
+
+### 1.3.4
 - **Projectivy sets itself up.** After installing Projectivy, tap **Finish setup** on its Store card (or in Tune-ups). Helm turns on the permissions Projectivy needs, so the Home button can open it and notification badges work, then opens Projectivy's settings on the TV. No more digging through the TV's Accessibility menu.
 - **Button Mapper in one tap.** **Turn on** gives Button Mapper the permission it needs to remap your remote's buttons.
 
