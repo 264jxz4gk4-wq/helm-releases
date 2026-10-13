@@ -158,11 +158,18 @@ class HelmServer(
                 else -> json(JSONObject().put("error", "not found"), Response.Status.NOT_FOUND)
             }
         } catch (e: TvRemote.NotPaired) {
-            json(JSONObject().put("success", false).put("error", if (uri.endsWith("pair-finish")) (e.message ?: "pairing failed") else "not_paired"))
+            Log.w(TAG, "tv-remote $uri: not paired", e)
+            json(JSONObject().put("success", false).put("error", if (uri.endsWith("pair-finish")) "Paired, but the TV refused the remote connection: ${e.message}" else "not_paired"))
         } catch (e: TvRemote.PairingError) {
+            Log.w(TAG, "tv-remote $uri: ${e.message}")
             json(JSONObject().put("success", false).put("error", e.message))
-        } catch (e: java.io.IOException) {
-            val msg = if (uri.endsWith("pair-start")) "Couldn't reach the TV's remote service (${e.message}). Is it a Google TV or Android TV, and on the same Wi-Fi?" else "unreachable"
+        } catch (e: Exception) {
+            Log.w(TAG, "tv-remote $uri failed", e)
+            val msg = when {
+                uri.endsWith("pair-start") -> "Couldn't reach the TV's remote service (${e.message}). Is it a Google TV or Android TV, and on the same Wi-Fi?"
+                uri.endsWith("pair-finish") -> "Pairing didn't finish: ${e.javaClass.simpleName}: ${e.message}"
+                else -> "unreachable"
+            }
             json(JSONObject().put("success", false).put("error", msg))
         }
     }

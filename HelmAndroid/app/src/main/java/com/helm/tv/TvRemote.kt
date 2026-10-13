@@ -290,10 +290,16 @@ class TvRemote(private val context: Context) {
             if ((digest[0].toInt() and 0xFF) != code.substring(0, 2).toInt(16)) throw PairingError("that code doesn't match the one on the TV")
             send(s.outputStream, outer(40, pb(1 to digest)))                     // secret
             expect(s, 41)                                                        // paired
+            Log.i(TAG, "paired with $ip")
         } finally {
             closeQuietly(s)
         }
-        return remote(ip).device
+        return try {
+            remote(ip).device
+        } catch (e: Exception) {
+            Log.w(TAG, "paired with $ip, but the remote connection failed", e)
+            throw e
+        }
     }
 
     // ------------------------------------------------------------ remote
@@ -305,6 +311,7 @@ class TvRemote(private val context: Context) {
         private val ready = java.util.concurrent.CountDownLatch(1)
 
         init {
+            Log.i(TAG, "remote: connected to $ip:$REMOTE_PORT (${sock.session.protocol}, ${sock.session.cipherSuite})")
             sock.soTimeout = 0
             Thread({ reader() }, "HelmTvRemote-$ip").apply { isDaemon = true; start() }
             if (!ready.await(10, java.util.concurrent.TimeUnit.SECONDS)) { close(); throw java.io.IOException("the TV didn't finish setting up the remote") }
@@ -317,6 +324,7 @@ class TvRemote(private val context: Context) {
             try {
                 while (!closed) {
                     val msg = parse(receive(sock.inputStream))
+                    Log.d(TAG, "remote: message fields ${msg.keys}")
                     when {
                         msg.containsKey(1) -> {                                   // remote_configure
                             val cfg = parse(msg.bytes(1)!!)
