@@ -91,6 +91,15 @@ def install_adb():
         return find_adb()
     return None
 
+def mac_download_url(data):
+    """The Mac build for this computer's chip. Intel Macs can't open the
+    Apple Silicon build. (Under Rosetta this reports x86_64, and the Intel
+    build runs there too.)"""
+    import platform
+    if platform.machine() == 'x86_64' and data.get('mac_intel_download'):
+        return data['mac_intel_download']
+    return data.get('mac_download')
+
 def check_for_update():
     try:
         with urllib.request.urlopen(VERSION_URL, timeout=5) as r:
@@ -173,7 +182,7 @@ def status():
 def check_update():
     update = check_for_update()
     if update:
-        return jsonify({'update': True, 'version': update.get('version'), 'notes': update.get('notes'), 'url': update.get('mac_download')})
+        return jsonify({'update': True, 'version': update.get('version'), 'notes': update.get('notes'), 'url': mac_download_url(update)})
     return jsonify({'update': False})
 
 @flask_app.route('/install-adb')
