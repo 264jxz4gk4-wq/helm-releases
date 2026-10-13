@@ -22,7 +22,7 @@ def resource_path(relative_path):
     return os.path.join(BASE_DIR, relative_path)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UI_DIR = os.path.join(BASE_DIR, 'ui')
-CURRENT_VERSION = "1.3.7"
+CURRENT_VERSION = "1.3.8"
 VERSION_URL = "https://raw.githubusercontent.com/264jxz4gk4-wq/helm-releases/main/version.json"
 PORT = 5001
 
@@ -355,6 +355,80 @@ def wake_route():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+# ---- TV remote without developer mode (Google TV / Android TV) ----
+# Google's own remote protocol: pair once with a code on the TV screen, then
+# keys and app links work with no developer options. See atvremote.py.
+import atvremote
+TV_REMOTE = atvremote.TvRemoteManager(os.path.join(os.path.expanduser('~'), '.helm'))
+_TVR_CODE_RE = re.compile(r'^[0-9A-Fa-f]{6}$')
+
+def _tvr_ip(data):
+    ip = str(data.get('ip', '')).strip().split(':')[0]
+    return ip if _IP_RE.match(ip) else None
+
+@flask_app.route('/tv-remote/status', methods=['GET'])
+def tv_remote_status():
+    return jsonify({'available': True})
+
+@flask_app.route('/tv-remote/pair-start', methods=['POST'])
+def tv_remote_pair_start():
+    ip = _tvr_ip(request.json or {})
+    if not ip:
+        return jsonify({'success': False, 'error': 'invalid ip'}), 400
+    try:
+        TV_REMOTE.pair_start(ip)
+        return jsonify({'success': True})
+    except atvremote.PairingError as e:
+        return jsonify({'success': False, 'error': str(e)})
+    except OSError as e:
+        return jsonify({'success': False, 'error': "Couldn't reach the TV's remote service (%s). Is it a Google TV or Android TV, and on the same Wi-Fi?" % e})
+
+@flask_app.route('/tv-remote/pair-finish', methods=['POST'])
+def tv_remote_pair_finish():
+    data = request.json or {}
+    ip, code = _tvr_ip(data), str(data.get('code', '')).strip()
+    if not ip or not _TVR_CODE_RE.match(code):
+        return jsonify({'success': False, 'error': 'the code is 6 characters: numbers and the letters A to F'}), 400
+    try:
+        device = TV_REMOTE.pair_finish(ip, code)
+        return jsonify({'success': True, 'device': device})
+    except (atvremote.PairingError, atvremote.NotPaired) as e:
+        return jsonify({'success': False, 'error': str(e)})
+    except OSError as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@flask_app.route('/tv-remote/key', methods=['POST'])
+def tv_remote_key():
+    data = request.json or {}
+    ip = _tvr_ip(data)
+    try:
+        key = int(data.get('key'))
+    except (TypeError, ValueError):
+        key = -1
+    if not ip or not 0 < key < 400:
+        return jsonify({'success': False, 'error': 'invalid ip or key'}), 400
+    try:
+        TV_REMOTE.press(ip, key)
+        return jsonify({'success': True})
+    except atvremote.NotPaired:
+        return jsonify({'success': False, 'error': 'not_paired'})
+    except OSError as e:
+        return jsonify({'success': False, 'error': 'unreachable', 'detail': str(e)})
+
+@flask_app.route('/tv-remote/launch', methods=['POST'])
+def tv_remote_launch():
+    data = request.json or {}
+    ip, url = _tvr_ip(data), str(data.get('url', '')).strip()
+    if not ip or len(url) > 500 or not re.match(r'^(https?|market)://', url):
+        return jsonify({'success': False, 'error': 'invalid ip or link'}), 400
+    try:
+        TV_REMOTE.launch(ip, url)
+        return jsonify({'success': True})
+    except atvremote.NotPaired:
+        return jsonify({'success': False, 'error': 'not_paired'})
+    except OSError as e:
+        return jsonify({'success': False, 'error': 'unreachable', 'detail': str(e)})
 
 @flask_app.before_request
 def block_dns_rebinding():

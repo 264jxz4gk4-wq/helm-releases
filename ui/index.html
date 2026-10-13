@@ -139,6 +139,9 @@
   .hero-actions .btn { margin: 4px 0 4px 6px; }
   .quick-grid { display: flex; flex-wrap: wrap; margin: 0 -6px 8px; }
   .tune-card { margin-top: 6px; }
+  .code-pair { display: flex; align-items: center; padding: 12px 0 0; margin-top: 14px; border-top: 1px solid var(--line); }
+  .code-pair .grow { flex: 1; min-width: 0; }
+  .code-pair .btn { margin-left: 12px; flex-shrink: 0; }
   .on-tv-card { margin-bottom: 28px; }
   .on-tv-head { display: flex; align-items: flex-start; }
   .on-tv-head .grow { flex: 1; min-width: 0; }
@@ -389,7 +392,7 @@
 </head>
 <body class="conn-off">
 <nav class="sidebar" id="nav">
-  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.7</span></div>
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.8</span></div>
   <button class="nav-btn active" data-page="devices" onclick="showPage('devices', event)"><i data-icon="tv"></i><span class="nav-label">My TV</span></button>
   <button class="nav-btn" data-page="remote" onclick="showPage('remote', event)"><i data-icon="remote"></i><span class="nav-label">Remote</span></button>
   <button class="nav-btn" data-page="store" onclick="showPage('store', event)"><i data-icon="layout-grid"></i><span class="nav-label">Apps</span></button>
@@ -399,7 +402,7 @@
   </div>
 </nav>
 <header class="topbar">
-  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.7</span></div>
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.8</span></div>
   <div class="conn-pill"><span class="status-dot"></span><span class="conn-text">Not connected</span></div>
 </header>
 
@@ -447,6 +450,10 @@
         <div class="field-row">
           <input class="input" id="ip-input" placeholder="192.168.1.74" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.keyCode===13)connect()">
           <button class="btn" onclick="connect()" id="connect-btn">Connect</button>
+        </div>
+        <div class="code-pair" id="code-pair-row" style="display:none">
+          <div class="grow"><div class="tune-title">No developer options?</div><div class="tune-sub">Google TVs can still use Helm's Remote: pair with a code the TV shows.</div></div>
+          <button class="btn btn-sm btn-outline" onclick="startCodePairing()">Remote only</button>
         </div>
         <div class="hint">On the TV: Settings → Network &amp; Internet → your Wi‑Fi shows the IP address. Newer Google TVs may need you to <a href="#" onclick="openPairing();return false">pair with a code</a>.</div>
       </div>
@@ -2465,6 +2472,7 @@ function routeFor(key) {
   if (remoteMode === 'ir' && irKey) return 'ir';
   if (wifiKey) return 'wifi';
   if (irKey) return 'ir';
+  if (tvRemoteIp && TV_KEYCODES[key]) return 'tvremote';
   return 'none';
 }
 
@@ -2517,6 +2525,8 @@ async function press(key, el) {
   try {
     if (route === 'ir') {
       await irSend(irPrefs.brand, irPrefs.set, key, irPrefs.timing);
+    } else if (route === 'tvremote') {
+      await pressViaTvRemote(key);
     } else {
       const r = await adbRaw(`adb -s ${currentIp}:5555 shell input keyevent ${REMOTE_KEYS[key]}`);
       if (/not found|offline|unauthorized|no devices|closed/i.test(r.error)) {
@@ -2527,6 +2537,90 @@ async function press(key, el) {
     }
   } catch (e) {
     toast(e && e.helm ? e.message : "Couldn't send that", 'error');
+  }
+}
+
+// ---- Remote without developer mode (Google TV / Android TV) ----
+// Google TVs run Google's own remote service (the one the Google TV phone
+// app uses). Pairing shows a code on the TV once; after that the Remote
+// works with no developer options. The Mac and Windows servers speak that
+// protocol (atvremote.py); Helm for Android doesn't yet, so it hides this.
+const TV_KEYCODES = { power: 26, input: 178, mute: 164, up: 19, down: 20, left: 21, right: 22, ok: 23,
+  back: 4, home: 3, menu: 176, vol_up: 24, vol_down: 25, ch_up: 166, ch_down: 167,
+  play_pause: 85, rewind: 89, ffwd: 90, del: 67, enter: 66 };
+let tvRemoteAvailable = false;
+let tvRemoteIp = localStorage.getItem('tvRemoteIp') || '';
+
+function checkTvRemote() {
+  fetch(`${API}/tv-remote/status`).then(r => r.ok ? r.json() : null).then(j => {
+    tvRemoteAvailable = !!(j && j.available);
+    const el = document.getElementById('code-pair-row');
+    if (el) el.style.display = tvRemoteAvailable ? '' : 'none';
+  }).catch(() => {});
+}
+
+async function tvRemotePost(path, body) {
+  try {
+    const res = await fetch(`${API}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return await res.json();
+  } catch (e) {
+    return { success: false, error: "Couldn't reach Helm" };
+  }
+}
+
+function askCode() {
+  document.getElementById('dialog-content').innerHTML = `
+    <h2>Type the code on your TV</h2>
+    <p class="lead">Your TV is showing a 6-character code, numbers and the letters A to F.</p>
+    <input class="input" id="tv-code" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false"
+      style="text-transform:uppercase;letter-spacing:4px;font-size:20px;text-align:center;margin-bottom:16px"
+      onkeydown="if(event.keyCode===13)closeDialog(this.value)">
+    <div class="btn-row" style="justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeDialog(false)">Cancel</button>
+      <button class="btn" onclick="closeDialog(document.getElementById('tv-code').value)">Pair</button>
+    </div>`;
+  document.getElementById('dialog').className = 'overlay open';
+  document.body.classList.add('modal-open');
+  setTimeout(() => { const i = document.getElementById('tv-code'); if (i) i.focus(); }, 50);
+  return new Promise(resolve => { dialogResolve = resolve; });
+}
+
+async function startCodePairing() {
+  const typed = document.getElementById('ip-input').value.trim().replace(/:\d+$/, '');
+  const ip = typed || localStorage.getItem('lastIp') || '';
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
+    toast("Type your TV's IP address first. On the TV: Settings → Network & Internet → your Wi‑Fi.", 'error');
+    return;
+  }
+  toast('Asking the TV for a code…', 'info');
+  const start = await tvRemotePost('/tv-remote/pair-start', { ip });
+  if (!start.success) { toast(start.error || "Couldn't start pairing", 'error'); return; }
+  document.getElementById('toast').className = 'toast';
+  const code = await askCode();
+  if (!code) return;
+  toast('Pairing…', 'info');
+  const done = await tvRemotePost('/tv-remote/pair-finish', { ip, code: String(code).trim().toUpperCase() });
+  if (!done.success) { toast(done.error || "Couldn't pair", 'error'); return; }
+  tvRemoteIp = ip;
+  localStorage.setItem('tvRemoteIp', ip);
+  document.getElementById('toast').className = 'toast';
+  const d = done.device || {};
+  showNotice('Remote connected', [
+    `Helm can now control ${d.model ? d.vendor + ' ' + d.model : 'your TV'} without developer options: arrows, OK, Home, Back, volume, play/pause and power.`,
+    'Installing apps, cleaning up and the other tools still need developer options. You can turn those on any time and connect as usual.',
+  ]);
+  showPage('remote');
+}
+
+async function pressViaTvRemote(key) {
+  const r = await tvRemotePost('/tv-remote/key', { ip: tvRemoteIp, key: TV_KEYCODES[key] });
+  if (r.success) return;
+  if (r.error === 'not_paired') {
+    tvRemoteIp = ''; localStorage.removeItem('tvRemoteIp');
+    renderRemote();
+    toast('The TV forgot Helm. Pair again with a code on the My TV page.', 'error');
+  } else {
+    toast("Can't reach the TV. Is it on and on the same Wi‑Fi?", 'error');
   }
 }
 
@@ -2609,7 +2703,7 @@ async function sendText() {
   const box = document.getElementById('tv-text');
   const text = box.value.replace(/[\r\n\t]+/g, ' ');
   if (!text) return;
-  if (!currentIp) { toast('Typing needs a Wi‑Fi connection to the TV. Connect first.', 'error'); return; }
+  if (!currentIp) { toast(tvRemoteIp ? "Typing needs developer options for now. Use the arrows and OK, or connect with developer options on." : 'Typing needs a Wi‑Fi connection to the TV. Connect first.', 'error'); return; }
   // The TV's `input` command can only type what's on a plain keyboard; one
   // accented letter or emoji makes it reject the whole text.
   if (/[^\x20-\x7E]/.test(text)) {
@@ -2650,13 +2744,14 @@ function renderRemote() {
     sub.textContent = `Sending IR codes for ${irBrand(irPrefs.brand).name} · point this device at the TV`;
     if (!set) sub.textContent = 'IR remote';
   } else {
-    sub.textContent = currentIp ? `Controlling ${currentName || currentIp} over Wi‑Fi` : 'Control your TV over Wi‑Fi';
+    sub.textContent = currentIp ? `Controlling ${currentName || currentIp} over Wi‑Fi`
+      : tvRemoteIp ? `Controlling ${tvRemoteIp} with a remote pairing (no developer options)` : 'Control your TV over Wi‑Fi';
   }
   document.querySelectorAll('#remote [data-key]').forEach(b => {
     if (routeFor(b.getAttribute('data-key')) === 'none' && (currentIp || ready)) b.classList.add('na'); else b.classList.remove('na');
   });
   const notice = document.getElementById('remote-notice');
-  if (!currentIp && !ready) {
+  if (!currentIp && !ready && !tvRemoteIp) {
     notice.innerHTML = `<div class="notice">${icon('circle-alert')}<span class="grow">${irInfo.available && !irInfo.problem ? 'Connect to your TV over Wi‑Fi, or set up the IR remote below.' : 'Connect to your TV to use the remote.'}</span><button class="btn btn-sm btn-outline" onclick="showPage('devices')">Connect</button></div>`;
   } else {
     notice.innerHTML = '';
@@ -2792,6 +2887,7 @@ document.addEventListener('keydown', e => {
 // ---- start ----
 hydrateIcons();
 applyTheme(currentDeviceType);
+checkTvRemote();
 const lastIp = localStorage.getItem('lastIp') || '';
 if (lastIp) document.getElementById('ip-input').value = lastIp;
 renderSavedDevices();

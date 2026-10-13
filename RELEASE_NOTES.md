@@ -1,6 +1,9 @@
 ## Helm — Universal TV Manager
 
-### What's New in 1.3.7
+### What's New in 1.3.8
+- **Remote without developer options (Mac and Windows).** On a Google TV or Android TV, tap **Remote only** on the My TV page, type the code the TV shows, and Helm's Remote works: arrows, OK, Home, Back, volume, play/pause and power. It uses the same pairing as Google's own TV remote, so there's nothing to turn on in the TV's settings. Installing apps and the other tools still need developer options. Coming to Helm for Android next.
+
+### 1.3.7
 - **Turn your TV on from Helm.** Until now, Power over Wi‑Fi could only turn TVs off, because a TV that's off stops answering. Helm now remembers each TV's network address while it's connected, and when you press Power and the TV doesn't answer, it sends the TV a wake-up signal over Wi‑Fi (Wake-on-LAN). Found on the onn. 4K Plus, which keeps a service running just to listen for it. Connect to your TV once after updating so Helm can learn its address.
 
 ### 1.3.6
