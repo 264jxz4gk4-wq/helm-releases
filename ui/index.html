@@ -389,7 +389,7 @@
 </head>
 <body class="conn-off">
 <nav class="sidebar" id="nav">
-  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.6</span></div>
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.7</span></div>
   <button class="nav-btn active" data-page="devices" onclick="showPage('devices', event)"><i data-icon="tv"></i><span class="nav-label">My TV</span></button>
   <button class="nav-btn" data-page="remote" onclick="showPage('remote', event)"><i data-icon="remote"></i><span class="nav-label">Remote</span></button>
   <button class="nav-btn" data-page="store" onclick="showPage('store', event)"><i data-icon="layout-grid"></i><span class="nav-label">Apps</span></button>
@@ -399,7 +399,7 @@
   </div>
 </nav>
 <header class="topbar">
-  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.6</span></div>
+  <div class="logo"><span class="logo-mark"><svg viewBox="20 20 68 68" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true"><circle cx="54" cy="54" r="27.8" stroke-width="2.8"/><circle cx="54" cy="54" r="11.9" stroke-width="2"/><path stroke-width="1.8" d="M54 42.1V26.2M62.4 45.6l11.3-11.3M65.9 54h15.9M62.4 62.4l11.3 11.3M54 65.9v15.9M45.6 62.4L34.3 73.7M42.1 54H26.2M45.6 45.6L34.3 34.3"/><g fill="currentColor" stroke="none"><circle cx="54" cy="54" r="5.5"/><circle cx="54" cy="26.2" r="2.2"/><circle cx="73.7" cy="34.3" r="2.2"/><circle cx="81.8" cy="54" r="2.2"/><circle cx="73.7" cy="73.7" r="2.2"/><circle cx="54" cy="81.8" r="2.2"/><circle cx="34.3" cy="73.7" r="2.2"/><circle cx="26.2" cy="54" r="2.2"/><circle cx="34.3" cy="34.3" r="2.2"/></g></svg></span>Helm<span class="logo-ver">1.3.7</span></div>
   <div class="conn-pill"><span class="status-dot"></span><span class="conn-text">Not connected</span></div>
 </header>
 
@@ -1572,8 +1572,9 @@ async function describeDevice() {
 function rememberDevice(ip, name, type) {
   localStorage.setItem('lastIp', ip);
   localStorage.setItem('deviceType', type);
+  const mac = (savedDevices.find(d => d.ip === ip) || {}).mac;
   savedDevices = savedDevices.filter(d => d.ip !== ip);
-  savedDevices.unshift({ ip, name, type });
+  savedDevices.unshift(mac ? { ip, name, type, mac } : { ip, name, type });
   savedDevices = savedDevices.slice(0, 8);
   localStorage.setItem('savedDevices', JSON.stringify(savedDevices));
 }
@@ -1591,7 +1592,7 @@ function afterConnect() {
     if (document.getElementById('page-store').classList.contains('active')) renderStore();
     renderTuneups();
     return sleepRefresh();
-  });
+  }).then(() => learnMac());
 }
 
 async function connect() {
@@ -2503,6 +2504,11 @@ function flash(el) {
 async function press(key, el) {
   flash(el);
   const route = routeFor(key);
+  // Power while the TV isn't connected: try turning it on over Wi-Fi.
+  if (key === 'power' && route === 'none') {
+    const ip = currentIp || localStorage.getItem('lastIp');
+    if (ip && tvMac(ip) && await wakeTv(ip)) return;
+  }
   if (route === 'none') {
     if (irReady()) toast(`Your TV's IR codes don't include ${KEY_NAMES[key] || 'that button'}. Connect over Wi‑Fi to use it.`, 'error');
     else toast(irInfo.available && !irInfo.problem ? 'Connect to your TV, or set up the IR remote' : 'Connect to your TV first', 'error');
@@ -2513,11 +2519,78 @@ async function press(key, el) {
       await irSend(irPrefs.brand, irPrefs.set, key, irPrefs.timing);
     } else {
       const r = await adbRaw(`adb -s ${currentIp}:5555 shell input keyevent ${REMOTE_KEYS[key]}`);
-      if (/not found|offline|unauthorized|no devices|closed/i.test(r.error)) throw helmError("The TV isn't responding. Reconnect on the My TV page.");
+      if (/not found|offline|unauthorized|no devices|closed/i.test(r.error)) {
+        // Power to a TV that's gone quiet: it's probably off, so wake it.
+        if (key === 'power' && tvMac(currentIp) && await wakeTv(currentIp)) return;
+        throw helmError("The TV isn't responding. Reconnect on the My TV page.");
+      }
     }
   } catch (e) {
     toast(e && e.helm ? e.message : "Couldn't send that", 'error');
   }
+}
+
+// ---- turning the TV on over Wi-Fi (Wake-on-LAN) ----
+// A TV that's off stops answering adb after a while, so Power over Wi-Fi
+// used to only turn TVs off. Many TVs still listen for a "magic packet"
+// while off (the onn. 4K Plus runs a service just for it), so Helm learns
+// each TV's network address (MAC) while connected and, when Power can't
+// reach the TV, asks the computer or phone running Helm to send one.
+const MAC_RE = /\b([0-9a-f]{2}(?::[0-9a-f]{2}){5})\b/i;
+const BAD_MACS = ['00:00:00:00:00:00', '02:00:00:00:00:00', 'ff:ff:ff:ff:ff:ff'];
+
+async function learnMac() {
+  if (!currentIp) return;
+  try {
+    // Wi-Fi: the address in use right now (it can differ from the factory
+    // one when the TV uses a private address for this network).
+    let out = await adb('shell dumpsys wifi | grep -m1 mWifiInfo');
+    let m = (out.match(/MAC: ([0-9a-f:]{17})/i) || [])[1];
+    if (!m || BAD_MACS.includes(m.toLowerCase())) {
+      out = await adb('shell dumpsys ethernet | grep -m1 -i -E "hwaddr|mac"');
+      m = (out.match(MAC_RE) || [])[1];
+    }
+    if (!m || BAD_MACS.includes(m.toLowerCase())) return;
+    const d = savedDevices.find(x => x.ip === currentIp);
+    if (d && d.mac !== m.toLowerCase()) {
+      d.mac = m.toLowerCase();
+      localStorage.setItem('savedDevices', JSON.stringify(savedDevices));
+    }
+  } catch (e) { /* not important enough to bother anyone */ }
+}
+
+function tvMac(ip) {
+  const d = savedDevices.find(x => x.ip === ip);
+  return d && d.mac;
+}
+
+async function wakeTv(ip) {
+  const mac = tvMac(ip);
+  if (!mac) return false;
+  toast('Turning your TV on…', 'info');
+  try {
+    await fetch(`${API}/wake`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mac, ip }) });
+  } catch (e) { return false; }
+  // Give the TV up to ~30 seconds to come back, sending the packet again
+  // now and then in case the first one was missed.
+  for (let i = 0; i < 10; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+    if (i === 3 || i === 6) {
+      fetch(`${API}/wake`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mac, ip }) }).catch(() => {});
+    }
+    const c = await adbRaw(`adb connect ${ip}:5555`);
+    if (!/connected to/i.test(c.output)) continue;
+    const probe = await adbRaw(`adb -s ${ip}:5555 shell echo helm-ok`);
+    if (probe.output.includes('helm-ok')) {
+      await adbRaw(`adb -s ${ip}:5555 shell input keyevent KEYCODE_WAKEUP`);
+      toast('Your TV is on', 'success');
+      return true;
+    }
+  }
+  toast("The TV didn't wake up. Some TVs switch Wi‑Fi off completely when they're off: check the TV's power or energy settings for something like Network standby or Wake on Wi‑Fi.", 'error');
+  return true;   // handled: the message above explains
 }
 
 // `input text` takes one argument: spaces become %s, and the whole thing is

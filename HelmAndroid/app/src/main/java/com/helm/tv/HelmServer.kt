@@ -68,6 +68,7 @@ class HelmServer(
 
                 session.method == Method.POST && session.uri == "/adb" -> handleAdb(readJson(session))
                 session.method == Method.POST && session.uri == "/pair" -> handlePair(readJson(session))
+                session.method == Method.POST && session.uri == "/wake" -> handleWake(readJson(session))
                 session.method == Method.GET && session.uri == "/scan-network" -> handleScan()
 
                 // IR blaster. Android only: the UI asks only when it's running
@@ -123,6 +124,45 @@ class HelmServer(
         val out = JSONObject().put("success", r.success)
         if (r.success) out.put("ip", r.ip).put("model", r.model) else out.put("error", r.error)
         return json(out)
+    }
+
+    // Wake-on-LAN: see send_magic_packet in menubar.py. 6 x 0xFF, then the
+    // TV's MAC 16 times, broadcast on UDP ports 9 and 7.
+    private val macRe = Regex("^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}$")
+    private val wakeIpRe = Regex("^[0-9]{1,3}(\\.[0-9]{1,3}){3}$")
+
+    private fun handleWake(body: JSONObject?): Response {
+        val mac = body?.optString("mac").orEmpty().trim()
+        val ip = body?.optString("ip").orEmpty().substringBefore(':').trim()
+        if (!macRe.matches(mac) || mac.lowercase() in setOf("00:00:00:00:00:00", "02:00:00:00:00:00", "ff:ff:ff:ff:ff:ff")) {
+            return json(JSONObject().put("success", false).put("error", "mac must look like 88:42:d0:f4:48:76"), Response.Status.BAD_REQUEST)
+        }
+        if (ip.isNotEmpty() && !wakeIpRe.matches(ip)) {
+            return json(JSONObject().put("success", false).put("error", "invalid ip"), Response.Status.BAD_REQUEST)
+        }
+        return try {
+            val macBytes = mac.split(':').map { it.toInt(16).toByte() }.toByteArray()
+            val packet = ByteArray(6) { 0xFF.toByte() } + (1..16).flatMap { macBytes.asList() }.toByteArray()
+            val targets = mutableListOf("255.255.255.255")
+            if (ip.isNotEmpty()) targets.add(ip.split('.').take(3).joinToString(".") + ".255")
+            // Closed by hand: DatagramSocket isn't Closeable on Android 4.4.
+            val sock = DatagramSocket()
+            try {
+                sock.broadcast = true
+                for (t in targets) for (port in intArrayOf(9, 7)) {
+                    try {
+                        sock.send(java.net.DatagramPacket(packet, packet.size, InetAddress.getByName(t), port))
+                    } catch (e: Exception) {
+                        Log.w(TAG, "wake: send to $t:$port failed: ${e.message}")
+                    }
+                }
+            } finally {
+                sock.close()
+            }
+            json(JSONObject().put("success", true))
+        } catch (e: Exception) {
+            json(JSONObject().put("success", false).put("error", e.message ?: "send failed"))
+        }
     }
 
     private fun handleIr(body: JSONObject?): Response {

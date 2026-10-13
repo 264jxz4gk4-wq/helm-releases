@@ -1,6 +1,9 @@
 ## Helm — Universal TV Manager
 
-### What's New in 1.3.6
+### What's New in 1.3.7
+- **Turn your TV on from Helm.** Until now, Power over Wi‑Fi could only turn TVs off, because a TV that's off stops answering. Helm now remembers each TV's network address while it's connected, and when you press Power and the TV doesn't answer, it sends the TV a wake-up signal over Wi‑Fi (Wake-on-LAN). Found on the onn. 4K Plus, which keeps a service running just to listen for it. Connect to your TV once after updating so Helm can learn its address.
+
+### 1.3.6
 - **Store links checked and updated.** PPSSPP is now 1.20.4 (was 1.17.1), Projectivy 4.72 and Aerial Views 1.8.5. Every other download link was checked and points to the right, current file.
 
 ### 1.3.5

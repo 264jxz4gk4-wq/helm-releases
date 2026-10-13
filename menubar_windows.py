@@ -293,6 +293,47 @@ def _local_ip():
     finally:
         s.close()
 
+# ---- Wake-on-LAN ----
+# Some TVs keep listening for a "magic packet" while they're off. The onn.
+# 4K Plus runs a vendor service for exactly this (magic_wake_daemon, started
+# from /vendor/etc/init/magic_wake_daemon.rc), so Helm's Power button can
+# turn the TV on even after it has stopped answering adb. The packet is 6
+# bytes of 0xFF then the TV's MAC address 16 times, sent as a UDP broadcast
+# (ports 9 and 7, the two that WoL listeners use).
+_MAC_RE = _re.compile(r'^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}$')
+
+def send_magic_packet(mac, ip=None):
+    packet = b'\xff' * 6 + bytes.fromhex(mac.replace(':', '')) * 16
+    targets = ['255.255.255.255']
+    if ip:
+        targets.append('.'.join(ip.split('.')[:3] + ['255']))  # the TV's own /24
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        for target in targets:
+            for port in (9, 7):
+                try:
+                    s.sendto(packet, (target, port))
+                except OSError:
+                    pass
+    finally:
+        s.close()
+
+@app.route('/wake', methods=['POST'])
+def wake_route():
+    data = request.json or {}
+    mac = str(data.get('mac', '')).strip()
+    ip = str(data.get('ip', '')).strip().split(':')[0]
+    if not _MAC_RE.match(mac) or mac.lower() in ('00:00:00:00:00:00', '02:00:00:00:00:00', 'ff:ff:ff:ff:ff:ff'):
+        return jsonify({'success': False, 'error': 'mac must look like 88:42:d0:f4:48:76'}), 400
+    if ip and not _IP_RE.match(ip):
+        return jsonify({'success': False, 'error': 'invalid ip'}), 400
+    try:
+        send_magic_packet(mac, ip or None)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/scan-network', methods=['GET'])
 def scan_network_route():
     """Find TVs with network debugging on in this computer's /24.
@@ -365,7 +406,7 @@ def make_icon():
 def open_ui(icon, item):
     webbrowser.open('http://localhost:5001')
 
-CURRENT_VERSION = '1.3.6'
+CURRENT_VERSION = '1.3.7'
 
 def do_update(download_url, icon):
     try:

@@ -1,7 +1,7 @@
 {
-  "version": "1.3.6",
-  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.6/HelmMac.zip",
-  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.6/HelmWindows.zip",
-  "notes": "Store links checked: newer PPSSPP, Projectivy and Aerial Views",
-  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.6/Helm.apk"
+  "version": "1.3.7",
+  "mac_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.7/HelmMac.zip",
+  "windows_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.7/HelmWindows.zip",
+  "notes": "Power can now turn your TV on over Wi-Fi",
+  "android_download": "https://github.com/264jxz4gk4-wq/helm-releases/releases/download/v1.3.7/Helm.apk"
 }
