@@ -1,5 +1,25 @@
 ## Helm — Universal TV Manager
 
+### Install
+
+**Mac** (Apple Silicon or Intel): open Terminal and paste
+```
+curl -fsSL https://raw.githubusercontent.com/264jxz4gk4-wq/helm-releases/main/install-mac.sh | bash
+```
+**Windows**: open PowerShell and paste
+```
+irm https://raw.githubusercontent.com/264jxz4gk4-wq/helm-releases/main/install-windows.ps1 | iex
+```
+**Android** (phones and tablets, Android 4.4 and newer): download **Helm.apk** below and open it.
+
+<details><summary>Downloaded the zip instead and got a warning?</summary>
+
+Helm isn't signed with a paid Apple or Microsoft certificate, so your computer warns you the first time. That's expected, and the installers above skip it.
+
+- **Mac**, "cannot be opened because Apple cannot check it": open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to Helm. Use **HelmMac.zip** on Apple Silicon Macs (M1 and newer) and **HelmMacIntel.zip** on Intel Macs. Not sure? Apple menu → About This Mac: "Chip" means Apple Silicon, "Processor … Intel" means Intel.
+- **Windows**, "Windows protected your PC": click **More info**, then **Run anyway**.
+</details>
+
 ### What's New in 1.3.8
 - **Remote without developer options (Mac and Windows).** On a Google TV or Android TV, tap **Remote only** on the My TV page, type the code the TV shows, and Helm's Remote works: arrows, OK, Home, Back, volume, play/pause and power. It uses the same pairing as Google's own TV remote, so there's nothing to turn on in the TV's settings. Installing apps and the other tools still need developer options. Coming to Helm for Android next.
 
