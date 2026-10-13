@@ -1,6 +1,10 @@
 ## Helm — Universal TV Manager
 
-### What's New in 1.3.3
+### What's New in 1.3.4
+- **Projectivy sets itself up.** After installing Projectivy, tap **Finish setup** on its Store card (or in Tune-ups). Helm turns on the permissions Projectivy needs, so the Home button can open it and notification badges work, then opens Projectivy's settings on the TV. No more digging through the TV's Accessibility menu.
+- **Button Mapper in one tap.** **Turn on** gives Button Mapper the permission it needs to remap your remote's buttons.
+
+### 1.3.3
 - **On TCL TVs, the sleep timer is the TV's own.** Helm now sets the TV's built-in sleep timer, so it shows in the TV's Sleep Timer menu, the TV gives its usual one-minute warning, and a timer set from the TV's menu shows in Helm too. Other TVs keep Helm's own timer.
 
 ### 1.3.2

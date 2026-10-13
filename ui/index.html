@@ -1085,7 +1085,8 @@ const STORE = [
   // Utility
   { name: 'Downloader', pkg: 'com.esaba.downloader', desc: 'Browse and sideload APKs on your TV — required for Fire TV', color: '#F68B1F', category: 'Utility',
     playstore: true },
-  { name: 'Button Mapper', pkg: 'flar2.homebutton', desc: 'Remap your TV remote buttons', color: '#1E88E5', category: 'Utility', playstore: true },
+  { name: 'Button Mapper', pkg: 'flar2.homebutton', desc: 'Remap your TV remote buttons', color: '#1E88E5', category: 'Utility', playstore: true,
+    after: { label: 'Turn on', fn: 'buttonMapperSetup' } },
   { name: 'TV Bro', pkg: 'com.phlox.tvwebbrowser', desc: 'Web browser built for TV remotes', color: '#5FACFF', category: 'Utility',
     url: 'https://github.com/truefedex/tv-bro/releases/download/v2.1.6/tvbro-2.1.6-generic-geckoExcluded.apk' },
   { name: 'LocalSend', pkg: 'org.localsend.localsend_app', desc: 'Send photos and files from your phone to the TV over Wi‑Fi', color: '#008080', category: 'Utility',
@@ -1120,7 +1121,8 @@ const STORE = [
     url: 'https://github.com/TeamNewPipe/NewPipe/releases/download/v0.29.1/NewPipe_v0.29.1.apk' },
   // Launchers
   { name: 'Projectivy', pkg: 'com.spocky.projengmenu', desc: 'Clean, customizable home screen', color: '#E78940', category: 'Launchers',
-    url: 'https://github.com/spocky/miproja1/releases/download/4.71/ProjectivyLauncher-4.71-c95-xda-release.apk' },
+    url: 'https://github.com/spocky/miproja1/releases/download/4.71/ProjectivyLauncher-4.71-c95-xda-release.apk',
+    after: { label: 'Finish setup', fn: 'projectivySetup' } },
   // Games
   { name: 'Moonlight', pkg: 'com.limelight', desc: 'Stream games from your PC to the TV', color: '#565C64', category: 'Games',
     url: 'https://github.com/moonlight-stream/moonlight-android/releases/download/v12.2/app-nonRoot-release.apk' },
@@ -1818,12 +1820,92 @@ async function kodiSmoothSports() {
   }
 }
 
+// ---- accessibility + launcher setup (Projectivy, Button Mapper) ----
+// Apps like Projectivy and Button Mapper only work after someone digs through
+// Settings → Accessibility on the TV. Helm turns the same switches on over adb.
+// Component names come from each app's own AndroidManifest.xml (Projectivy
+// 4.72, Button Mapper 4.12) and were checked on an onn. 4K Plus (Android 14).
+const PROJECTIVY = 'com.spocky.projengmenu';
+const PROJECTIVY_A11Y = `${PROJECTIVY}/${PROJECTIVY}.services.ProjectivyAccessibilityService`;
+const PROJECTIVY_NOTIF = `${PROJECTIVY}/${PROJECTIVY}.services.notification.NotificationListener`;
+const BUTTON_MAPPER = 'flar2.homebutton';
+
+async function secureSetting(key) {
+  const v = (await adb(`shell settings get secure ${key}`)).replace(/\r/g, '').trim();
+  return v === 'null' ? '' : v;
+}
+
+// Adds one accessibility service without turning off the ones already on.
+// Returns true if the TV now lists it.
+async function enableAccessibility(component) {
+  const list = (await secureSetting('enabled_accessibility_services')).split(':').filter(Boolean);
+  if (!list.includes(component)) {
+    list.push(component);
+    await adb(`shell settings put secure enabled_accessibility_services ${list.join(':')}`);
+  }
+  await adb('shell settings put secure accessibility_enabled 1');
+  return (await secureSetting('enabled_accessibility_services')).split(':').includes(component);
+}
+
+async function projectivySetup() {
+  if (!currentIp) { toast('Connect to your TV first', 'error'); return; }
+  if (!await askConfirm('Finish setting up Projectivy?',
+    "Helm will turn on the permissions Projectivy asks for: Accessibility (so the Home button can open Projectivy), " +
+    "notification access (for its notification badges) and display over other apps (for its side panels). " +
+    "You can turn them off later in the TV's Settings, under Accessibility and Apps.",
+    'Turn on')) return;
+  toast('Setting up Projectivy…', 'info');
+  try {
+    const a11y = await enableAccessibility(PROJECTIVY_A11Y);
+    await adb(`shell cmd notification allow_listener ${PROJECTIVY_NOTIF}`);
+    await adb(`shell appops set ${PROJECTIVY} SYSTEM_ALERT_WINDOW allow`);
+    const notif = (await secureSetting('enabled_notification_listeners')).includes(PROJECTIVY);
+    if (!a11y) {
+      toast("This TV didn't accept the change. Turn it on by hand: Settings, Accessibility, Projectivy.", 'error');
+      return;
+    }
+    await adb('shell am start -a tv.projectivy.SETTINGS');   // Projectivy's own settings screen
+    document.getElementById('toast').className = 'toast';
+    showNotice('Projectivy is ready', [
+      "Projectivy can now take over the Home button" + (notif ? ' and show notification badges.' : '.'),
+      "Its settings just opened on the TV. To make Home always open Projectivy, go to General and turn on Override Home button (the wording varies a little between versions).",
+    ]);
+  } catch (e) {
+    toast("Couldn't reach the TV. Reconnect on the Devices page.", 'error');
+  }
+}
+
+async function buttonMapperSetup() {
+  if (!currentIp) { toast('Connect to your TV first', 'error'); return; }
+  if (!await askConfirm('Turn on Button Mapper?',
+    "Helm will give Button Mapper the Accessibility permission it needs to remap your remote's buttons. " +
+    "You can turn it off later in the TV's Settings, under Accessibility.", 'Turn on')) return;
+  try {
+    // Button Mapper's service has a scrambled class name that can change
+    // between versions, so ask the TV for it instead of hard-coding it.
+    const found = await adb('shell cmd package query-services --components -a android.accessibilityservice.AccessibilityService');
+    const line = found.split('\n').map(l => l.trim()).find(l => l.startsWith(BUTTON_MAPPER + '/'));
+    const component = line || `${BUTTON_MAPPER}/a.i`;
+    if (await enableAccessibility(component)) {
+      toast('Button Mapper can now remap your remote. Open it to pick what each button does.', 'success');
+    } else {
+      toast("This TV didn't accept the change. Turn it on by hand: Settings, Accessibility, Button Mapper.", 'error');
+    }
+  } catch (e) {
+    toast("Couldn't reach the TV. Reconnect on the Devices page.", 'error');
+  }
+}
+
 // ---- tune-ups: one-tap fixes for what's on the connected TV ----
 const TUNEUPS = [
   { pkg: 'org.xbmc.kodi', app: 'Kodi', title: 'Smoother sports in Kodi', btn: 'Apply', run: 'kodiSmoothSports()',
     sub: "Switches the TV to each stream's frame rate, decodes with the TV's video chip, bigger buffer" },
   { pkg: 'com.neilturner.aerialviews', app: 'Aerial Views', title: 'Aerial Views as screensaver', btn: 'Set', run: "runAfter('com.neilturner.aerialviews')",
     sub: '4K aerial footage when the TV is idle' },
+  { pkg: 'com.spocky.projengmenu', app: 'Projectivy', title: 'Finish Projectivy setup', btn: 'Set up', run: 'projectivySetup()',
+    sub: 'Turns on the Home button takeover and notification badges for you' },
+  { pkg: 'flar2.homebutton', app: 'Button Mapper', title: 'Turn on Button Mapper', btn: 'Turn on', run: 'buttonMapperSetup()',
+    sub: 'Gives it the Accessibility permission it needs to remap buttons' },
 ];
 function renderTuneups() {
   const box = document.getElementById('tuneups');
